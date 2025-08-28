@@ -1,0 +1,28 @@
+{
+  "extends": [
+    "@tsconfig/node22",
+    "@tsconfig/strictest"
+  ],
+  "include": [
+    ".config/**/*",
+    "src/**/*",
+    "tests/**/*"
+  ],
+  "compilerOptions": {
+    "types": [
+      "node",
+      "vite/client",
+      "@vitest/browser/providers/playwright"
+    ],
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "DOM.AsyncIterable",
+      "ESNext"
+    ],
+    "noEmit": true,
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "erasableSyntaxOnly": true
+  }
+}

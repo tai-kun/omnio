@@ -1,0 +1,13 @@
+{
+  "editor.rulers": [100],
+  "dprint.path": "node_modules/dprint/dprint",
+  "typescript.tsdk": "node_modules/typescript/lib",
+  "[json][jsonc][javascript][typescript]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "dprint.dprint"
+  },
+  "[shellscript]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "foxundermoon.shell-format"
+  }
+}

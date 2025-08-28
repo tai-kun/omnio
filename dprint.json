@@ -1,0 +1,17 @@
+{
+  "excludes": [
+    "**/.history/",
+    "**/node_modules/",
+    "**/*-lock.json"
+  ],
+  "lineWidth": 100,
+  "typescript": {
+    "trailingCommas": "onlyMultiLine",
+    "singleBodyPosition": "nextLine",
+    "arrowFunction.useParentheses": "preferNone"
+  },
+  "plugins": [
+    "https://plugins.dprint.dev/typescript-0.95.10.wasm",
+    "https://plugins.dprint.dev/json-0.20.0.wasm"
+  ]
+}
