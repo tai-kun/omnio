@@ -1,0 +1,29 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  test:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - name: "チェックアウト"
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: "Node.js をセットアップ"
+        uses: volta-cli/action@5c175f92dea6f48441c436471e6479dbc192e194  # v4.2.1
+
+      - name: "依存関係をインストール"
+        run: |
+          npm ci
+          npx playwright install --with-deps
+
+      - name: "テスト"
+        run: npm run test
+
+      - name: "ビルド"
+        run: npm run build

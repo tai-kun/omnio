@@ -1,0 +1,70 @@
+name: "パッケージを公開"
+run-name: "v${{ github.event.inputs.version }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "バージョン (e.g., 1.2.3)"
+        required: true
+
+defaults:
+  run:
+    shell: bash -euo pipefail {0}
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - name: "チェックアウト"
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: "Git の設定"
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+
+      - name: "Node.js をセットアップ"
+        uses: volta-cli/action@5c175f92dea6f48441c436471e6479dbc192e194  # v4.2.1
+        with:
+          registry-url: "https://registry.npmjs.org"
+
+      - name: "バージョン確認"
+        run: |
+          if npm view "omnio@${{ github.event.inputs.version }}" version >/dev/null 2>&1; then
+            echo "Error: そのバージョンはすでに存在しています。" >&2
+            exit 1
+          fi
+
+      - name: "依存関係をインストール"
+        run: npm ci
+
+      - name: "ビルド"
+        run: npm run build
+
+      - name: "バージョンを更新"
+        run: |
+          npm version '${{ github.event.inputs.version }}'
+
+      - name: "すでにタグがあれば削除"
+        run: |
+          if git rev-parse "refs/tags/v${{ github.event.inputs.version }}" >/dev/null 2>&1; then
+            git tag -d v${{ github.event.inputs.version }}
+            git push origin --delete v${{ github.event.inputs.version }} || true
+          fi
+
+      - name: "タグ打ち"
+        run: |
+          git tag v${{ github.event.inputs.version }}
+          git push origin v${{ github.event.inputs.version }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: "公開"
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
