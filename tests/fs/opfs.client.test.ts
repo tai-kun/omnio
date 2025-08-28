@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, test } from "vitest";
 import { Opfs } from "../../src/fs/opfs.js";
 
-// function encode(s: string) {
-//   return new TextEncoder().encode(s);
-// }
+function encode(s: string) {
+  return new TextEncoder().encode(s);
+}
 
 describe("OpfsPath", () => {
   const ROOT = "root";
@@ -78,9 +78,9 @@ describe("e2e", () => {
 
     // 3. ファイルハンドルから書き込みストリームを取得し、ファイルに書き込む
 
-    // const writableStream = await fileHandle.createWritable({ keepExistingData: false });
-    // await writableStream.write(encode(fileContent));
-    // await writableStream.close();
+    const writableStream = await fileHandle.createWritable();
+    await writableStream.write(encode(fileContent));
+    await writableStream.close();
 
     // 4. 書き込み後のファイル内容を検証する
 

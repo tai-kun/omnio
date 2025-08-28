@@ -514,7 +514,10 @@ describe("readInternal", () => {
       .resolves
       .toStrictEqual({
         entityId: "01989d2b-9d77-7988-ac2d-23659f27b88f",
-        md5State: [1, 2, 3],
+        checksum: {
+          value: "00000000000000000000000000000000",
+          state: [1, 2, 3],
+        },
       });
   });
 
@@ -1519,7 +1522,7 @@ describe("update", () => {
   });
 });
 
-describe.only("updateExclusive", () => {
+describe("updateExclusive", () => {
   test("メタデータを排他的に更新できる", async ({ metadata, expect }) => {
     const objectPath = ObjectPath.parse("path/to/file.txt");
 
