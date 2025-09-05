@@ -5,34 +5,36 @@
   "description": "",
   "sideEffects": false,
   "type": "module",
-  "main": "./dist/index.js",
-  "types:": "./dist/index.d.ts",
   "exports": {
-    "errors": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./errors": {
       "types": "./dist/errors.d.ts",
       "default": "./dist/errors.js"
     },
-    "logger": {
+    "./logger": {
       "types": "./dist/logger/index.d.ts",
       "default": "./dist/logger/index.js"
     },
-    "schemas": {
+    "./schemas": {
       "types": "./dist/schemas.d.ts",
       "default": "./dist/schemas.js"
     },
-    "db/node": {
+    "./db/node": {
       "types": "./dist/db/node-db.d.ts",
       "default": "./dist/db/node-db.js"
     },
-    "db/wasm": {
+    "./db/wasm": {
       "types": "./dist/db/wasm-db.d.ts",
       "default": "./dist/db/wasm-db.js"
     },
-    "fs/node": {
+    "./fs/node": {
       "types": "./dist/fs/node-fs.d.ts",
       "default": "./dist/fs/node-fs.js"
     },
-    "fs/opfs": {
+    "./fs/opfs": {
       "types": "./dist/fs/opfs.d.ts",
       "default": "./dist/fs/opfs.js"
     }
