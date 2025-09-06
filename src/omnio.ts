@@ -1817,11 +1817,10 @@ export default class Omnio {
    * @param query リストアップするためのクエリーです。
    * @returns ディレクトリーまたはオブジェクトをリストアップした結果です。
    */
-  // @ts-expect-error
   @mutex.readonly
   public async list<const TQuery extends ListQuery>(
     query: TQuery,
-  ): Promise<List<ListItem<TQuery["select"], TQuery["where"]["isObject"]>>> {
+  ): Promise<List<ListItem<$Get<TQuery, "select">, $Get<$Get<TQuery, "where">, "isObject">>>> {
     const {
       skip,
       take,
