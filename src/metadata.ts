@@ -652,9 +652,131 @@ type StatOutput = {
  */
 type ListInput = Readonly<{
   /**
-   * ディレクトリーパスです。
+   * リストアイテムがオブジェクトのときに結果に含めるカラムを選択します。
    */
-  dirPath: readonly string[];
+  select:
+    | Readonly<{
+      /**
+       * バケット名です。
+       *
+       * @default false
+       */
+      bucket?: boolean | undefined;
+
+      /**
+       * オブジェクトの識別子です。
+       *
+       * @default false
+       */
+      id?: boolean | undefined;
+
+      /**
+       * バケット内のオブジェクトパスです。
+       *
+       * @default false
+       */
+      path?: boolean | undefined;
+
+      /**
+       * オブジェクトのメタデータのレコードタイプです。
+       *
+       * @default false
+       */
+      recordType?: boolean | undefined;
+
+      /**
+       * `recordType` が更新された時刻 (ミリ秒) です。
+       *
+       * @default false
+       */
+      recordTimestamp?: boolean | undefined;
+
+      /**
+       * オブジェクトのサイズ (バイト数) です。
+       *
+       * @default false
+       */
+      size?: boolean | undefined;
+
+      /**
+       * オブジェクト形式です。
+       *
+       * @default false
+       */
+      mimeType?: boolean | undefined;
+
+      /**
+       * オブジェクトが作成された時刻 (ミリ秒) です。
+       *
+       * @default false
+       */
+      createdAt?: boolean | undefined;
+
+      /**
+       * オブジェクトが最後に更新された時刻 (ミリ秒) です。
+       *
+       * @default false
+       */
+      lastModifiedAt?: boolean | undefined;
+
+      /**
+       * オブジェクトのチェックサム (MD5 ハッシュ値) です。
+       *
+       * @default false
+       */
+      checksum?: boolean | undefined;
+
+      /**
+       * オブジェクトのチェックサムのアルゴリズムです。
+       *
+       * @default false
+       */
+      checksumAlgorithm?: boolean | undefined;
+
+      /**
+       * オブジェクトに関連付けられたオブジェクトタグです。
+       *
+       * @default false
+       */
+      objectTags?: boolean | undefined;
+
+      /**
+       * オブジェクトの説明文です。
+       *
+       * @default false
+       */
+      description?: boolean | undefined;
+
+      /**
+       * ユーザー定義のメタデータです。
+       *
+       * @default false
+       */
+      userMetadata?: boolean | undefined;
+
+      /**
+       * 実際に保存されるオブジェクトの識別子です。
+       *
+       * @default false
+       */
+      entityId?: boolean | undefined;
+    }>
+    | undefined;
+
+  /**
+   * 対象を限定します。
+   */
+  where: {
+    /**
+     * ディレクトリーパスです。
+     */
+    dirPath: readonly string[];
+
+    /**
+     * `true` ならオブジェクトのみを、`false` ならディレクトリーのみをリストアップします。
+     */
+    isObject: boolean | undefined;
+  };
 
   /**
    * スキップするアイテムの数です。
@@ -691,19 +813,50 @@ type ListInput = Readonly<{
 }>;
 
 /**
- * ディレクトリーまたはオブジェクトをリストアップした結果です。
+ * ディレクトリーをリストアップした結果です。
+ *
+ * @template TSelect SELECT するカラムです。
  */
-type ListOutput = {
+type ListOutputDirectoryItem = {
   /**
-   * `true` ならオブジェクトです。`false` ならディレクトリーです。
+   * `false` ならディレクトリーです。
    */
-  isObject: boolean;
+  isObject: false;
 
   /**
    * リストアイテムの名前です。
    */
   name: string;
 };
+
+/**
+ * オブジェクトをリストアップした結果です。
+ *
+ * @template TSelect SELECT するカラムです。
+ */
+type ListOutputObjectItem<TSelect> = $Select<ObjectMetadata, TSelect> & {
+  /**
+   * `true` ならオブジェクトです。
+   */
+  isObject: true;
+
+  /**
+   * リストアイテムの名前です。
+   */
+  name: string;
+};
+
+/**
+ * ディレクトリーまたはオブジェクトをリストアップした結果です。
+ *
+ * @template TSelect SELECT するカラムです。
+ */
+type ListOutput<TSelect, TIsObject> = undefined extends TIsObject
+  ? ListOutputDirectoryItem | ListOutputObjectItem<TSelect>
+  : (
+    | (false extends TIsObject ? ListOutputDirectoryItem : never)
+    | (true extends TIsObject ? ListOutputObjectItem<TSelect> : never)
+  );
 
 /**
  * ゴミ箱に入れられたオブジェクトのメタデータを取得するための入力パラメーターです。
@@ -1844,40 +1997,106 @@ export default class Metadata {
     };
   }
 
-  /**
-   * ディレクトリーまたはオブジェクトをリストアップします。
-   *
-   * @param inp ディレクトリーまたはオブジェクトをリストアップするための入力パラメーターです。
-   * @returns リストアップした結果です。
-   */
-  @mutex.readonly
-  public async list(inp: ListInput): Promise<ListResult<ListOutput>> {
+  async #listObjects(inp: ListInput) {
     const {
       skip = 0,
       take,
-      dirPath,
-      orderBy = {
-        name: undefined,
-        preferObject: undefined,
+      where: {
+        dirPath,
+      },
+      select,
+      orderBy: {
+        name: nameOrder = "ASC",
       },
     } = inp;
-    const {
-      name: orderByName = "ASC",
-      preferObject = false,
-    } = orderBy;
-    const orderByIsObject = preferObject ? "DESC" : "ASC";
+
+    const columns: Sql[] = [];
+    const entries: v.ObjectEntries = {
+      name: v.string(),
+      isObject: v.literal(true),
+    };
+    const selectAll = select === undefined;
+    for (const column of this.#columns) {
+      if (!selectAll && select[column.key] !== true) {
+        continue;
+      }
+
+      columns.push(sql`
+        ref.${column.selector} AS "${column.keySql}"`);
+      entries[column.key] = column.valueSchema;
+    }
+
     const stmt: Sql[] = [];
     const nameIdxSql = raw((dirPath.length + 1).toString(10));
     const pathSegLenSql = raw((dirPath.length + 1).toString(10));
     stmt.push(sql`
       SELECT
-        DISTINCT
-        path_seg[${nameIdxSql}] AS name,
-        array_length(path_seg, 1) = ${pathSegLenSql} AS "isObject"
+        src.path_seg[${nameIdxSql}] AS "name",
+        TRUE AS "isObject",
+        ${join(columns, ",")}
+      FROM
+        metadata_v1 AS src
+      INNER JOIN
+        metadata AS ref
+      ON
+        src.objectid = ref.id
+      WHERE
+        array_length(src.path_seg, 1) = ${pathSegLenSql}`);
+    for (let i = 0; i < dirPath.length; i++) {
+      stmt.push(sql`
+        AND src.path_seg[${raw((i + 1).toString(10))}] = ${dirPath[i]}`);
+    }
+
+    stmt.push(sql`
+      ORDER BY
+        "name" ${raw(nameOrder)}`);
+
+    // ページネーションを適用します。
+    if (take !== undefined && take > 0) {
+      stmt.push(sql`
+      LIMIT
+        ${take}`);
+    }
+    if (skip > 0) {
+      stmt.push(sql`
+      OFFSET
+        ${skip}`);
+    }
+
+    const rows = await this.#query(join(stmt, ""));
+    const schema = v.object(entries);
+
+    return (async function*(rows, schema): any {
+      for (const row of rows) {
+        yield v.parse(schema, row);
+      }
+    })(rows, schema);
+  }
+
+  async #listDirectories(inp: ListInput) {
+    const {
+      skip = 0,
+      take,
+      where: {
+        dirPath,
+      },
+      orderBy: {
+        name: nameOrder = "ASC",
+      },
+    } = inp;
+
+    const stmt: Sql[] = [];
+    const nameIdxSql = raw((dirPath.length + 1).toString(10));
+    const pathSegLenSql = raw((dirPath.length + 1).toString(10));
+    stmt.push(sql`
+      SELECT
+        DISTINCT ON ("name")
+        path_seg[${nameIdxSql}] AS "name",
+        FALSE AS "isObject",
       FROM
         metadata_v1
       WHERE
-        array_length(path_seg, 1) >= ${pathSegLenSql}`);
+        array_length(path_seg, 1) > ${pathSegLenSql}`);
     for (let i = 0; i < dirPath.length; i++) {
       stmt.push(sql`
         AND path_seg[${raw((i + 1).toString(10))}] = ${dirPath[i]}`);
@@ -1885,8 +2104,8 @@ export default class Metadata {
 
     stmt.push(sql`
       ORDER BY
-        "isObject" ${raw(orderByIsObject)},
-        name ${raw(orderByName)}`);
+        "name" ${raw(nameOrder)}`);
+
     // ページネーションを適用します。
     if (take !== undefined && take > 0) {
       stmt.push(sql`
@@ -1902,20 +2121,115 @@ export default class Metadata {
     const rows = await this.#query(join(stmt, ""));
     const schema = v.object({
       name: v.string(),
-      isObject: v.boolean(),
+      isObject: v.literal(false),
     });
 
-    return (async function*(rows, schema) {
+    return (async function*(rows, schema): any {
       for (const row of rows) {
-        const {
-          name,
-          isObject,
-        } = v.parse(schema, row);
+        yield v.parse(schema, row);
+      }
+    })(rows, schema);
+  }
 
-        yield {
-          name,
-          isObject,
-        };
+  /**
+   * ディレクトリーまたはオブジェクトをリストアップします。
+   *
+   * @param inp ディレクトリーまたはオブジェクトをリストアップするための入力パラメーターです。
+   * @returns リストアップした結果です。
+   */
+  // @ts-expect-error 方が複雑すぎるのかエラーがでます。
+  @mutex.readonly
+  public async list<const TInp extends ListInput>(
+    inp: TInp,
+  ): Promise<ListResult<ListOutput<TInp["select"], TInp["where"]["isObject"]>>> {
+    if (inp.where.isObject === true) {
+      return await this.#listObjects(inp);
+    }
+    if (inp.where.isObject === false) {
+      return await this.#listDirectories(inp);
+    }
+
+    const {
+      skip = 0,
+      take,
+      where: {
+        dirPath,
+      },
+      select,
+      orderBy: {
+        name: nameOrder = "ASC",
+        preferObject = false,
+      },
+    } = inp;
+
+    const columns: Sql[] = [];
+    const entries: v.ObjectEntries = {
+      isObject: v.literal(true),
+      name: v.string(),
+    };
+    const selectAll = select === undefined;
+    for (const column of this.#columns) {
+      if (!selectAll && select[column.key] !== true) {
+        continue;
+      }
+
+      columns.push(sql`
+        ref.${column.selector} AS "${column.keySql}"`);
+      entries[column.key] = column.valueSchema;
+    }
+
+    const stmt: Sql[] = [];
+    const nameIdxSql = raw((dirPath.length + 1).toString(10));
+    const pathSegLenSql = raw((dirPath.length + 1).toString(10));
+    stmt.push(sql`
+      SELECT
+        DISTINCT ON ("name", "isObject")
+        src.path_seg[${nameIdxSql}] AS "name",
+        array_length(src.path_seg, 1) = ${pathSegLenSql} AS "isObject",
+        ${join(columns, ",")}
+      FROM
+        metadata_v1 AS src
+      LEFT JOIN
+        metadata AS ref
+      ON
+        src.objectid = ref.id
+        AND array_length(ref.path_segments, 1) = ${pathSegLenSql}
+      WHERE
+        array_length(src.path_seg, 1) >= ${pathSegLenSql}`);
+    for (let i = 0; i < dirPath.length; i++) {
+      stmt.push(sql`
+        AND src.path_seg[${raw((i + 1).toString(10))}] = ${dirPath[i]}`);
+    }
+
+    stmt.push(sql`
+      ORDER BY
+        "isObject" ${raw(preferObject ? "DESC" : "ASC")},
+        "name" ${raw(nameOrder)}`);
+
+    // ページネーションを適用します。
+    if (take !== undefined && take > 0) {
+      stmt.push(sql`
+      LIMIT
+        ${take}`);
+    }
+    if (skip > 0) {
+      stmt.push(sql`
+      OFFSET
+        ${skip}`);
+    }
+
+    const rows = await this.#query(join(stmt, ""));
+    const schema = v.union([
+      v.object(entries),
+      v.object({
+        isObject: v.literal(false),
+        name: v.string(),
+      }),
+    ]);
+
+    return (async function*(rows, schema): any {
+      for (const row of rows) {
+        yield v.parse(schema, row);
       }
     })(rows, schema);
   }

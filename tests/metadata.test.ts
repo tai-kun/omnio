@@ -914,6 +914,133 @@ describe("search", () => {
 });
 
 describe("list", () => {
+  test("オブジェクトをリストアップできる", async ({ metadata, expect }) => {
+    const PATHS = [
+      "file1.txt",
+      "file1.txt/file2.txt",
+      "a",
+      "a/file1.txt",
+      "a/b/file1.txt",
+      "a/b/file2.txt",
+      "a/d/file1.txt",
+      "b/c/d/file1.txt",
+    ];
+    for (const path of PATHS) {
+      await expect(metadata.createExclusive({
+        checksum: {
+          value: asChecksum("00000000000000000000000000000000"),
+          state: asHashState([]),
+        },
+        entityId: getEntityId(),
+        mimeType: asMimeType("text/plain"),
+        objectPath: ObjectPath.parse(path),
+        objectSize: asUint(0),
+        objectTags: asObjectTags([]),
+        description: undefined,
+        userMetadata: null,
+      }))
+        .resolves
+        .not
+        .toThrow();
+    }
+
+    await expect.soft(Array.fromAsync(
+      await metadata.list({
+        select: {
+          size: true,
+          mimeType: true,
+        },
+        where: {
+          dirPath: [],
+          isObject: true,
+        },
+        take: undefined,
+        skip: undefined,
+        orderBy: {
+          name: undefined,
+          preferObject: undefined,
+        },
+      }),
+    ))
+      .resolves
+      .toStrictEqual([
+        {
+          isObject: true,
+          name: "a",
+          size: 0,
+          mimeType: "text/plain",
+        },
+        {
+          isObject: true,
+          name: "file1.txt",
+          size: 0,
+          mimeType: "text/plain",
+        },
+      ]);
+  });
+
+  test("ディレクトリーをリストアップできる", async ({ metadata, expect }) => {
+    const PATHS = [
+      "file1.txt",
+      "file1.txt/file2.txt",
+      "a",
+      "a/file1.txt",
+      "a/b/file1.txt",
+      "a/b/file2.txt",
+      "a/d/file1.txt",
+      "b/c/d/file1.txt",
+    ];
+    for (const path of PATHS) {
+      await expect(metadata.createExclusive({
+        checksum: {
+          value: asChecksum("00000000000000000000000000000000"),
+          state: asHashState([]),
+        },
+        entityId: getEntityId(),
+        mimeType: asMimeType("text/plain"),
+        objectPath: ObjectPath.parse(path),
+        objectSize: asUint(0),
+        objectTags: asObjectTags([]),
+        description: undefined,
+        userMetadata: null,
+      }))
+        .resolves
+        .not
+        .toThrow();
+    }
+
+    await expect.soft(Array.fromAsync(
+      await metadata.list({
+        select: undefined,
+        where: {
+          dirPath: [],
+          isObject: false,
+        },
+        take: undefined,
+        skip: undefined,
+        orderBy: {
+          name: undefined,
+          preferObject: undefined,
+        },
+      }),
+    ))
+      .resolves
+      .toStrictEqual([
+        {
+          isObject: false,
+          name: "a",
+        },
+        {
+          isObject: false,
+          name: "b",
+        },
+        {
+          isObject: false,
+          name: "file1.txt",
+        },
+      ]);
+  });
+
   test("ディレクトリとオブジェクトをリストアップできる", async ({ metadata, expect }) => {
     const PATHS = [
       "file1.txt",
@@ -946,7 +1073,14 @@ describe("list", () => {
 
     await expect.soft(Array.fromAsync(
       await metadata.list({
-        dirPath: [],
+        select: {
+          size: true,
+          mimeType: true,
+        },
+        where: {
+          dirPath: [],
+          isObject: undefined,
+        },
         take: undefined,
         skip: undefined,
         orderBy: {
@@ -972,15 +1106,26 @@ describe("list", () => {
         {
           isObject: true,
           name: "a",
+          size: 0,
+          mimeType: "text/plain",
         },
         {
           isObject: true,
           name: "file1.txt",
+          size: 0,
+          mimeType: "text/plain",
         },
       ]);
     await expect.soft(Array.fromAsync(
       await metadata.list({
-        dirPath: ["a"],
+        select: {
+          size: true,
+          mimeType: true,
+        },
+        where: {
+          dirPath: ["a"],
+          isObject: undefined,
+        },
         take: undefined,
         skip: undefined,
         orderBy: {
@@ -1002,11 +1147,20 @@ describe("list", () => {
         {
           isObject: true,
           name: "file1.txt",
+          size: 0,
+          mimeType: "text/plain",
         },
       ]);
     await expect.soft(Array.fromAsync(
       await metadata.list({
-        dirPath: ["a", "b"],
+        select: {
+          size: true,
+          mimeType: true,
+        },
+        where: {
+          dirPath: ["a", "b"],
+          isObject: undefined,
+        },
         take: undefined,
         skip: undefined,
         orderBy: {
@@ -1020,15 +1174,26 @@ describe("list", () => {
         {
           isObject: true,
           name: "file1.txt",
+          size: 0,
+          mimeType: "text/plain",
         },
         {
           isObject: true,
           name: "file2.txt",
+          size: 0,
+          mimeType: "text/plain",
         },
       ]);
     await expect.soft(Array.fromAsync(
       await metadata.list({
-        dirPath: ["b", "c"],
+        select: {
+          size: true,
+          mimeType: true,
+        },
+        where: {
+          dirPath: ["b", "c"],
+          isObject: undefined,
+        },
         take: undefined,
         skip: undefined,
         orderBy: {

@@ -560,9 +560,136 @@ export type Stats = {
 };
 
 /**
- * ディレクトリーまたはオブジェクトをリストアップするためのオプションです。
+ * ディレクトリーまたはオブジェクトをリストアップするためのクエリーです。
  */
-export type ListOptions = Readonly<{
+export type ListQuery = Readonly<{
+  /**
+   * 結果がオブジェクトだったとき、結果に含めるカラムを選択します。
+   */
+  select?:
+    | Readonly<{
+      /**
+       * バケット名です。
+       *
+       * @default false
+       */
+      bucket?: boolean | undefined;
+
+      /**
+       * オブジェクトの識別子です。
+       *
+       * @default false
+       */
+      id?: boolean | undefined;
+
+      /**
+       * バケット内のオブジェクトパスです。
+       *
+       * @default false
+       */
+      path?: boolean | undefined;
+
+      /**
+       * オブジェクトのメタデータのレコードタイプです。
+       *
+       * @default false
+       */
+      recordType?: boolean | undefined;
+
+      /**
+       * `recordType` が更新された時刻 (ミリ秒) です。
+       *
+       * @default false
+       */
+      recordTimestamp?: boolean | undefined;
+
+      /**
+       * オブジェクトのサイズ (バイト数) です。
+       *
+       * @default false
+       */
+      size?: boolean | undefined;
+
+      /**
+       * オブジェクト形式です。
+       *
+       * @default false
+       */
+      mimeType?: boolean | undefined;
+
+      /**
+       * オブジェクトが作成された時刻 (ミリ秒) です。
+       *
+       * @default false
+       */
+      createdAt?: boolean | undefined;
+
+      /**
+       * オブジェクトが最後に更新された時刻 (ミリ秒) です。
+       *
+       * @default false
+       */
+      lastModifiedAt?: boolean | undefined;
+
+      /**
+       * オブジェクトのチェックサム (MD5 ハッシュ値) です。
+       *
+       * @default false
+       */
+      checksum?: boolean | undefined;
+
+      /**
+       * オブジェクトのチェックサムのアルゴリズムです。
+       *
+       * @default false
+       */
+      checksumAlgorithm?: boolean | undefined;
+
+      /**
+       * オブジェクトに関連付けられたオブジェクトタグです。
+       *
+       * @default false
+       */
+      objectTags?: boolean | undefined;
+
+      /**
+       * オブジェクトの説明文です。
+       *
+       * @default false
+       */
+      description?: boolean | undefined;
+
+      /**
+       * ユーザー定義のメタデータです。
+       *
+       * @default false
+       */
+      userMetadata?: boolean | undefined;
+
+      /**
+       * 実際に保存されるオブジェクトの識別子です。
+       *
+       * @default false
+       */
+      entityId?: boolean | undefined;
+    }>
+    | undefined;
+
+  /**
+   * 対象を限定します。
+   */
+  where: Readonly<{
+    /**
+     * ディレクトリーパスです。
+     */
+    dirPath: readonly string[];
+
+    /**
+     * `true` ならオブジェクトのみを、`false` ならディレクトリーのみをリストアップします。
+     */
+    isObject?: boolean | undefined;
+  }>;
+
   /**
    * スキップするアイテムの数です。
    *
@@ -600,9 +727,30 @@ export type ListOptions = Readonly<{
 }>;
 
 /**
- * ディレクトリーまたはオブジェクトをリストアップするためのオプションです。
+ * ディレクトリーまたはオブジェクトをリストアップするためのクエリーです。
  */
-const ListOptionsSchema = v.object({
+const ListQuerySchema = v.object({
+  select: v.optional(v.object({
+    bucket: v.optional(v.boolean()),
+    id: v.optional(v.boolean()),
+    path: v.optional(v.boolean()),
+    recordType: v.optional(v.boolean()),
+    recordTimestamp: v.optional(v.boolean()),
+    size: v.optional(v.boolean()),
+    mimeType: v.optional(v.boolean()),
+    createdAt: v.optional(v.boolean()),
+    lastModifiedAt: v.optional(v.boolean()),
+    checksum: v.optional(v.boolean()),
+    checksumAlgorithm: v.optional(v.boolean()),
+    objectTags: v.optional(v.boolean()),
+    description: v.optional(v.boolean()),
+    userMetadata: v.optional(v.boolean()),
+    entityId: v.optional(v.boolean()),
+  })),
+  where: v.object({
+    dirPath: v.array(v.string()),
+    isObject: v.optional(v.boolean()),
+  }),
   skip: v.optional(schemas.UnsignedInteger),
   take: v.optional(schemas.UnsignedInteger),
   orderBy: v.optional(v.object({
@@ -612,19 +760,51 @@ const ListOptionsSchema = v.object({
 });
 
 /**
- * ディレクトリーまたはオブジェクトをリストアップした結果です。
+ * ディレクトリーをリストアップした結果です。
+ *
+ * @template TSelect SELECT するカラムです。
  */
-export type ListItem = {
+export type ListItemDirectory = {
   /**
-   * `true` ならオブジェクトです。`false` ならディレクトリーです。
+   * `false` ならディレクトリーです。
    */
-  isObject: boolean;
+  isObject: false;
 
   /**
-   * アイテムの名前です。
+   * リストアイテムの名前です。
    */
   name: string;
 };
+
+/**
+ * オブジェクトをリストアップした結果です。
+ *
+ * @template TSelect SELECT するカラムです。
+ */
+export type ListItemObject<TSelect> = $Select<ObjectMetadata, TSelect> & {
+  /**
+   * `true` ならオブジェクトです。
+   */
+  isObject: true;
+
+  /**
+   * リストアイテムの名前です。
+   */
+  name: string;
+};
+
+/**
+ * ディレクトリーまたはオブジェクトをリストアップした結果です。
+ *
+ * @template TSelect SELECT するカラムです。
+ * @template TIsObject オブジェクトのみを選択するかどうかです。
+ */
+export type ListItem<TSelect, TIsObject> = undefined extends TIsObject
+  ? ListItemDirectory | ListItemObject<TSelect>
+  : (
+    | (false extends TIsObject ? ListItemDirectory : never)
+    | (true extends TIsObject ? ListItemObject<TSelect> : never)
+  );
 
 /**
  * オブジェクトの説明文を対象に全文検索するためのオプションです。
@@ -1633,32 +1813,37 @@ export default class Omnio {
   /**
    * ディレクトリーまたはオブジェクトをリストアップします。
    *
-   * @param directoryPath ディレクトリーを表すパスセグメントの配列です。
-   * @param options ディレクトリーまたはオブジェクトをリストアップするためのオプションです。
+   * @template TQuery リストアップするためのクエリーの型です。
+   * @param query リストアップするためのクエリーです。
    * @returns ディレクトリーまたはオブジェクトをリストアップした結果です。
    */
+  // @ts-expect-error
   @mutex.readonly
-  public async list(
-    directoryPath: readonly string[],
-    options: ListOptions = {},
-  ): Promise<List<ListItem>> {
-    const dirPath = directoryPath; // TODO: 入力値検証
+  public async list<const TQuery extends ListQuery>(
+    query: TQuery,
+  ): Promise<List<ListItem<TQuery["select"], TQuery["where"]["isObject"]>>> {
     const {
       skip,
       take,
+      where,
+      select,
       orderBy = {},
-    } = v.parse(ListOptionsSchema, options);
+    } = v.parse(ListQuerySchema, query);
     const list = await this.#metadata.list({
       skip,
       take,
-      dirPath,
+      where: {
+        dirPath: where.dirPath,
+        isObject: where.isObject,
+      },
+      select,
       orderBy: {
         name: orderBy.name,
         preferObject: orderBy.preferObject,
       },
     });
 
-    return list;
+    return list as any;
   }
 
   /**
