@@ -949,6 +949,7 @@ describe("list", () => {
         select: {
           size: true,
           mimeType: true,
+          lastModifiedAt: true,
         },
         where: {
           dirPath: [],
@@ -969,12 +970,14 @@ describe("list", () => {
           name: "a",
           size: 0,
           mimeType: "text/plain",
+          lastModifiedAt: expect.any(Number),
         },
         {
           isObject: true,
           name: "file1.txt",
           size: 0,
           mimeType: "text/plain",
+          lastModifiedAt: expect.any(Number),
         },
       ]);
   });
@@ -1076,6 +1079,7 @@ describe("list", () => {
         select: {
           size: true,
           mimeType: true,
+          lastModifiedAt: true,
         },
         where: {
           dirPath: [],
@@ -1108,12 +1112,14 @@ describe("list", () => {
           name: "a",
           size: 0,
           mimeType: "text/plain",
+          lastModifiedAt: expect.any(Number),
         },
         {
           isObject: true,
           name: "file1.txt",
           size: 0,
           mimeType: "text/plain",
+          lastModifiedAt: expect.any(Number),
         },
       ]);
     await expect.soft(Array.fromAsync(
@@ -1121,6 +1127,7 @@ describe("list", () => {
         select: {
           size: true,
           mimeType: true,
+          lastModifiedAt: true,
         },
         where: {
           dirPath: ["a"],
@@ -1149,6 +1156,7 @@ describe("list", () => {
           name: "file1.txt",
           size: 0,
           mimeType: "text/plain",
+          lastModifiedAt: expect.any(Number),
         },
       ]);
     await expect.soft(Array.fromAsync(
@@ -1156,6 +1164,7 @@ describe("list", () => {
         select: {
           size: true,
           mimeType: true,
+          lastModifiedAt: true,
         },
         where: {
           dirPath: ["a", "b"],
@@ -1176,12 +1185,14 @@ describe("list", () => {
           name: "file1.txt",
           size: 0,
           mimeType: "text/plain",
+          lastModifiedAt: expect.any(Number),
         },
         {
           isObject: true,
           name: "file2.txt",
           size: 0,
           mimeType: "text/plain",
+          lastModifiedAt: expect.any(Number),
         },
       ]);
     await expect.soft(Array.fromAsync(
@@ -1189,6 +1200,7 @@ describe("list", () => {
         select: {
           size: true,
           mimeType: true,
+          lastModifiedAt: true,
         },
         where: {
           dirPath: ["b", "c"],

@@ -1248,6 +1248,11 @@ type Column<TKey extends string> = Readonly<{
   selector: Sql;
 
   /**
+   * `SELECT` に埋め込むカラムです。
+   */
+  toSelector: (table: string) => Sql;
+
+  /**
    * 値の valibot スキーマです。
    */
   valueSchema: v.ObjectEntries[string];
@@ -1284,6 +1289,11 @@ function createColumns<TKey extends string>(
     selector: valueSchema !== schemas.Timestamp
       ? raw(name)
       : sql`(EXTRACT(EPOCH FROM ${raw(name)}) * 1000)::BIGINT`,
+    toSelector(table) {
+      return valueSchema !== schemas.Timestamp
+        ? raw(table + "." + name)
+        : sql`(EXTRACT(EPOCH FROM ${raw(table)}.${raw(name)}) * 1000)::BIGINT`;
+    },
     valueSchema,
   }));
 }
@@ -2022,7 +2032,7 @@ export default class Metadata {
       }
 
       columns.push(sql`
-        ref.${column.selector} AS "${column.keySql}"`);
+        ${column.toSelector("ref")} AS "${column.keySql}"`);
       entries[column.key] = column.valueSchema;
     }
 
@@ -2141,7 +2151,7 @@ export default class Metadata {
   @mutex.readonly
   public async list<const TInp extends ListInput>(
     inp: TInp,
-  ): Promise<ListResult<ListOutput<TInp["select"], TInp["where"]["isObject"]>>> {
+  ): Promise<ListResult<ListOutput<$Get<TInp, "select">, $Get<$Get<TInp, "where">, "isObject">>>> {
     if (inp.where.isObject === true) {
       return await this.#listObjects(inp);
     }
@@ -2174,7 +2184,7 @@ export default class Metadata {
       }
 
       columns.push(sql`
-        ref.${column.selector} AS "${column.keySql}"`);
+        ${column.toSelector("ref")} AS "${column.keySql}"`);
       entries[column.key] = column.valueSchema;
     }
 
