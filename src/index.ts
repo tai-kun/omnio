@@ -25,3 +25,5 @@ export type * from "./object-path.js";
 
 export { default as Omnio } from "./omnio.js";
 export type * from "./omnio.js";
+
+export type { Uint8ArraySource } from "./to-uint8-array.js";

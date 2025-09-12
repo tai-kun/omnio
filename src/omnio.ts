@@ -872,7 +872,7 @@ export type SearchResult = {
 /**
  * オブジェクトのメタデータを更新するためのオプションです。
  */
-type UpdateObjectMetadataOptions = Readonly<{
+export type UpdateObjectMetadataOptions = Readonly<{
   /**
    * オブジェクトのデータ形式です。
    */
