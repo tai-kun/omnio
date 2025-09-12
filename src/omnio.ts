@@ -1320,20 +1320,19 @@ export default class Omnio {
    * 指定したパスにオブジェクトのデータとメタデータを書き込みます。
    *
    * @param path 書き込み先のオブジェクトパスです。
-   * @param data `Uint8Array` に変換できる値です。
+   * @param data `Uint8Array` に変換できる値またはファイルオブジェクトです。
    * @param options オブジェクト書き込み時のオプションです
    */
   @mutex
   public async putObject(
     path: ObjectPathLike,
-    data: Uint8ArraySource,
+    data: Uint8ArraySource | globalThis.File,
     options: PutObjectOptions | undefined = {},
   ): Promise<void> {
     if (!this.#bucket) {
       throw new Error("Omnio closed");
     }
 
-    const objectPath = v.parse(schemas.ObjectPathLike, path);
     const {
       flag,
       mimeType,
@@ -1341,15 +1340,26 @@ export default class Omnio {
       description,
       userMetadata,
     } = v.parse(PutOptionsSchema, options);
-    const obj = toUint8Array(data);
     const args = {
-      data: obj,
+      data: {} as Uint8Array<ArrayBuffer>,
       mimeType,
-      objectPath,
+      objectPath: v.parse(schemas.ObjectPathLike, path),
       objectTags,
       description,
       userMetadata,
     };
+    if (data instanceof ObjectFile) {
+      args.data = toUint8Array(await data.arrayBuffer());
+      args.mimeType ??= v.parse(schemas.MimeType, data.type);
+      args.objectTags ??= v.parse(v.optional(schemas.ObjectTags), data.objectTags);
+      args.description ??= v.parse(v.nullish(v.string()), data.description);
+      args.userMetadata ??= v.parse(v.optional(v.unknown()), data.userMetadata);
+    } else if (data instanceof File) {
+      args.data = toUint8Array(await data.arrayBuffer());
+      args.mimeType ??= v.parse(schemas.MimeType, data.type);
+    } else {
+      args.data = toUint8Array(data);
+    }
 
     switch (flag) {
       case "w":
