@@ -11,6 +11,9 @@ export type {
   ToTextSearchQueryString,
 } from "./metadata.js";
 
+export { default as mutex } from "./mutex.js";
+export type * from "./mutex.js";
+
 export { default as ObjectFileWriteStream } from "./object-file-write-stream.js";
 export type * from "./object-file-write-stream.js";
 
