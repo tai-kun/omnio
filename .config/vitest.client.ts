@@ -10,9 +10,11 @@ export default defineConfig({
     ],
   },
   define: {
-    __DEBUG__: ["DEBUG", "ACTIONS_RUNNER_DEBUG", "ACTIONS_STEP_DEBUG"]
+    __DEBUG__: ["DEBUG", "RUNNER_DEBUG", "ACTIONS_RUNNER_DEBUG", "ACTIONS_STEP_DEBUG"]
       .some(k => ["1", "true"].includes(process.env[k]?.toLowerCase()!))
       .toString(),
+    __CLIENT__: "true",
+    __SERVER__: "false",
   },
   test: {
     include: [

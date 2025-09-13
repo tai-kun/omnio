@@ -57,6 +57,16 @@ export interface FileHandle {
 }
 
 /**
+ * 削除時のオプションです。
+ */
+export type RemoveOptions = Readonly<{
+  /**
+   * エントリーを再帰的に削除するかどうかを指定します。
+   */
+  recursive: boolean;
+}>;
+
+/**
  * ファイル取得時のオプションです。
  */
 export type GetFileOptions = Readonly<{
@@ -87,8 +97,9 @@ export interface DirectoryHandle {
    * ディレクトリー直下から指定のアイテムを削除します。
    *
    * @param name 削除するアイテムの名前です。
+   * @param options 削除時のオプションです。
    */
-  removeEntry(name: string): Awaitable<void>;
+  removeEntry(name: string, options: RemoveOptions): Awaitable<void>;
 
   /**
    * 指定した名前のファイルハンドルを取得します。

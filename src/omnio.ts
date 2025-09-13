@@ -154,6 +154,25 @@ const OmnioOptionsSchema = v.object({
 });
 
 /**
+ * Omnio の利用を終了する際のオプションです。
+ */
+export type CloseOptions = Readonly<{
+  /**
+   * `true` にすると、データをすべて削除してから閉じます。
+   *
+   * @default false
+   */
+  purge?: boolean | undefined;
+}>;
+
+/**
+ * Omnio の利用を終了する際のオプションです。
+ */
+const CloseOptionsSchema = v.object({
+  purge: v.optional(v.boolean()),
+});
+
+/**
  * オブジェクトを開く際のモードです。
  *
  * - **`"w"`**: 書き込みモードで開きます。オブジェクトが存在しない場合は新規作成され、もし存在する場合は上書きします。
@@ -994,8 +1013,10 @@ export default class Omnio {
       return;
     }
 
-    await this.#metadata.connect();
     try {
+      await this.#fs.open();
+      await this.#metadata.connect();
+
       const omnio = await this.#fs.getDirectoryHandle("omnio", { create: false });
       const buckets = await omnio.getDirectoryHandle("buckets", { create: false });
       const bucket = await buckets.getDirectoryHandle(this.bucketName, { create: false });
@@ -1004,6 +1025,13 @@ export default class Omnio {
       };
     } catch (ex) {
       this.#bucket = null;
+
+      try {
+        await this.#fs.close();
+      } catch (ex) {
+        this.#logger.error("Omnio.open: Failed to close file system", ex);
+      }
+
       try {
         await this.#metadata.disconnect();
       } catch (ex) {
@@ -1016,14 +1044,31 @@ export default class Omnio {
 
   /**
    * Omnio の利用を終了します。
+   *
+   * @package options Omnio の利用を終了する際のオプションです。
    */
   @mutex
-  public async close(): Promise<void> {
+  public async close(options: CloseOptions | undefined = {}): Promise<void> {
     if (!this.#bucket) {
       return;
     }
 
+    const {
+      purge = false,
+    } = v.parse(CloseOptionsSchema, options);
+
+    // まずはデータベースファイルを手放します。
     await this.#metadata.disconnect();
+
+    // オプションに指定があればデータをすべて削除します。
+    if (purge) {
+      const omnio = await this.#fs.getDirectoryHandle("omnio", { create: false });
+      const buckets = await omnio.getDirectoryHandle("buckets", { create: false });
+      await buckets.removeEntry(this.bucketName, { recursive: true });
+    }
+
+    // ファイルシステムを閉じます。
+    await this.#fs.close();
     this.#bucket = null;
   }
 
@@ -1100,7 +1145,7 @@ export default class Omnio {
     } catch (ex) {
       // メタデータの作成に失敗したので、新しいエンティティーを削除します。
       try {
-        await this.#bucket!.entities.removeEntry(newEntityId);
+        await this.#bucket!.entities.removeEntry(newEntityId, { recursive: false });
       } catch (ex) {
         this.#logger.error("Omnio.putObject: Failed to remove new entity: " + newEntityId, ex);
       }
@@ -1112,7 +1157,7 @@ export default class Omnio {
     if (oldEntityId !== undefined) {
       // 新しいエンティティーの保存とメタデータの作成に成功したので、古いエンティティーを削除します。
       try {
-        await this.#bucket!.entities.removeEntry(oldEntityId);
+        await this.#bucket!.entities.removeEntry(oldEntityId, { recursive: false });
       } catch (ex) {
         this.#logger.error("Omnio.putObject: Failed to remove old entity: " + oldEntityId, ex);
       }
@@ -1237,7 +1282,7 @@ export default class Omnio {
     } catch (ex) {
       // メタデータの作成に失敗したので、新しいエンティティーを削除します。
       try {
-        await this.#bucket!.entities.removeEntry(newEntityId);
+        await this.#bucket!.entities.removeEntry(newEntityId, { recursive: false });
       } catch (ex) {
         this.#logger.error("Omnio.putObject: Failed to remove new entity: " + newEntityId, ex);
       }
@@ -1249,7 +1294,7 @@ export default class Omnio {
     if (oldEntityId !== undefined) {
       // 新しいエンティティーの保存とメタデータの作成に成功したので、古いエンティティーを削除します。
       try {
-        await this.#bucket!.entities.removeEntry(oldEntityId);
+        await this.#bucket!.entities.removeEntry(oldEntityId, { recursive: false });
       } catch (ex) {
         this.#logger.error("Omnio.putObject: Failed to remove old entity: " + oldEntityId, ex);
       }
@@ -1307,7 +1352,7 @@ export default class Omnio {
     } catch (ex) {
       // メタデータの作成に失敗したので、新しいエンティティーを削除します。
       try {
-        await this.#bucket!.entities.removeEntry(newEntityId);
+        await this.#bucket!.entities.removeEntry(newEntityId, { recursive: false });
       } catch (ex) {
         this.#logger.error("Omnio.putObject: Failed to remove entity: " + newEntityId, ex);
       }
@@ -1966,7 +2011,7 @@ export default class Omnio {
     } catch (ex) {
       // メタデータのコピーに失敗したので、エンティティを削除します。
       try {
-        await this.#bucket.entities.removeEntry(dstEntityId);
+        await this.#bucket.entities.removeEntry(dstEntityId, { recursive: false });
       } catch (ex) {
         this.#logger.error("Omnio.copyObject: Failed to remove entity: " + dstEntityId, ex);
       }
@@ -2043,7 +2088,7 @@ export default class Omnio {
     const objectPath = v.parse(schemas.ObjectPathLike, path);
     const { entityId } = await this.#metadata.trash({ objectPath });
     try {
-      await this.#bucket.entities.removeEntry(entityId);
+      await this.#bucket.entities.removeEntry(entityId, { recursive: false });
     } catch (ex) {
       if (ex instanceof FsPathNotFoundError) {
         // 何もしません。

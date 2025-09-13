@@ -42,9 +42,11 @@ const test = vitest.extend<{
       const duckdbLogger = __DEBUG__
         ? new duckdb.ConsoleLogger()
         : new duckdb.VoidLogger();
+      const fs = new Opfs(`${counter++}`);
+      await fs.open();
       const metadata = new Metadata({
         db: new WasmDb(duckdbBundle, duckdbLogger),
-        fs: new Opfs(`${counter++}`),
+        fs,
         logger: toConsoleLikeLogger(
           __DEBUG__
             ? new omnioLogger.ConsoleLogger()
@@ -59,6 +61,7 @@ const test = vitest.extend<{
       await metadata.connect();
       await use(metadata);
       await metadata.disconnect();
+      await fs.close();
     } else {
       const path = await import("node:path");
       const { NodeDb } = await import("../src/db/node-db.js");
@@ -70,9 +73,11 @@ const test = vitest.extend<{
         nowDatetimeString ??= (new Date()).toISOString(),
         task.name,
       );
+      const fs = new NodeFs(testDir);
+      await fs.open();
       const metadata = new Metadata({
         db: new NodeDb(),
-        fs: new NodeFs(testDir),
+        fs,
         logger: toConsoleLikeLogger(
           __DEBUG__
             ? new omnioLogger.ConsoleLogger()
@@ -87,6 +92,7 @@ const test = vitest.extend<{
       await metadata.connect();
       await use(metadata);
       await metadata.disconnect();
+      await fs.close();
     }
   },
 });

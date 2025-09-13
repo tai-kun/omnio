@@ -1555,41 +1555,20 @@ export default class Metadata {
     }
 
     // ディレクトリーを準備します。
-    await this.#fs.open();
-    try {
-      const omnio = await this.#fs.getDirectoryHandle("omnio", { create: true });
-      const buckets = await omnio.getDirectoryHandle("buckets", { create: true });
-      const bucket = await buckets.getDirectoryHandle(this.#bucketName, { create: true });
-      await bucket.getDirectoryHandle("metadata", { create: true });
-    } catch (ex) {
-      try {
-        await this.#fs.close();
-      } catch (ex) {
-        this.#logger.error("Metadata.connect: Failed to close fs", ex);
-      }
-
-      throw ex;
-    }
+    const omnio = await this.#fs.getDirectoryHandle("omnio", { create: true });
+    const buckets = await omnio.getDirectoryHandle("buckets", { create: true });
+    const bucket = await buckets.getDirectoryHandle(this.#bucketName, { create: true });
+    await bucket.getDirectoryHandle("metadata", { create: true });
 
     // データベースに接続します。
-    try {
-      const path = this.#fs.path.resolve(
-        "omnio",
-        "buckets",
-        this.#bucketName,
-        "metadata",
-        "duckdb",
-      );
-      await this.#db.open(path);
-    } catch (ex) {
-      try {
-        await this.#fs.close();
-      } catch (ex) {
-        this.#logger.error("Metadata.connect: Failed to close fs", ex);
-      }
-
-      throw ex;
-    }
+    const path = this.#fs.path.resolve(
+      "omnio",
+      "buckets",
+      this.#bucketName,
+      "metadata",
+      "duckdb",
+    );
+    await this.#db.open(path);
 
     // マイグレーションを行います。
     try {
@@ -1610,11 +1589,6 @@ export default class Metadata {
       } catch (ex) {
         this.#logger.error("Metadata.connect: Failed to close db", ex);
       }
-      try {
-        await this.#fs.close();
-      } catch (ex) {
-        this.#logger.error("Metadata.connect: Failed to close fs", ex);
-      }
 
       throw ex;
     }
@@ -1632,9 +1606,8 @@ export default class Metadata {
     // 変更を反映します。
     await this.#db.query("CHECKPOINT");
 
-    // データベースはファイルを利用しているため、データベース -> ファイルシステムの順番で閉じます。
+    // 変更の反映後にデータベースを閉じます。
     await this.#db.close();
-    await this.#fs.close();
 
     // フラグを更新します。
     this.#open = false;

@@ -5,9 +5,11 @@ export default defineConfig({
     target: "node22",
   },
   define: {
-    __DEBUG__: ["DEBUG", "ACTIONS_RUNNER_DEBUG", "ACTIONS_STEP_DEBUG"]
+    __DEBUG__: ["DEBUG", "RUNNER_DEBUG", "ACTIONS_RUNNER_DEBUG", "ACTIONS_STEP_DEBUG"]
       .some(k => ["1", "true"].includes(process.env[k]?.toLowerCase()!))
       .toString(),
+    __CLIENT__: "false",
+    __SERVER__: "true",
   },
   test: {
     include: [

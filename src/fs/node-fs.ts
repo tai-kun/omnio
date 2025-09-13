@@ -14,6 +14,7 @@ import type {
   GetDirectoryOptions,
   GetFileOptions,
   Path,
+  RemoveOptions,
   WritableFileStream,
   WriteChunkType,
 } from "./fs.types.js";
@@ -312,12 +313,39 @@ export class NodeFsDirectoryHandle implements DirectoryHandle {
    * ディレクトリー直下から指定のアイテムを削除します。
    *
    * @param name 削除するアイテムの名前です。
+   * @param options 削除時のオプションです。
    */
   @mutex
-  public async removeEntry(name: string): Promise<void> {
-    const filePath = path.join(this.#dirPath, name);
-    await assertFileExists(filePath);
-    await fsp.unlink(filePath);
+  public async removeEntry(name: string, options: RemoveOptions): Promise<void> {
+    const entryPath = path.join(this.#dirPath, name);
+    const { recursive } = options;
+
+    let isFile: boolean;
+    let isDirectory: boolean;
+    try {
+      const stats = await fsp.stat(entryPath);
+      isFile = stats.isFile();
+      isDirectory = stats.isDirectory();
+    } catch (ex) {
+      if (isEnoentError(ex)) {
+        throw new FsPathNotFoundError(entryPath, { cause: ex });
+      }
+
+      throw ex;
+    }
+
+    switch (true) {
+      case isFile:
+        await fsp.unlink(entryPath);
+        break;
+
+      case isDirectory:
+        await fsp.rm(entryPath, { recursive });
+        break;
+
+      default:
+        throw new FsPathNotFoundError(entryPath);
+    }
   }
 
   /**

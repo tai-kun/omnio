@@ -11,6 +11,7 @@ import type {
   GetDirectoryOptions,
   GetFileOptions,
   Path,
+  RemoveOptions,
   WritableFileStream,
   WriteChunkType,
 } from "./fs.types.js";
@@ -279,7 +280,7 @@ export class OpfsDirectoryHandle implements DirectoryHandle {
    * @param name 削除するアイテムの名前です。
    * @param options 削除時のオプションです。
    */
-  public async removeEntry(name: string, options?: { recursive?: boolean }): Promise<void> {
+  public async removeEntry(name: string, options: RemoveOptions): Promise<void> {
     try {
       await this.#native.removeEntry(name, options);
     } catch (ex) {

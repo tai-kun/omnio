@@ -35,7 +35,7 @@ const test = vitest.extend<{
         : new duckdb.VoidLogger();
       const omnio = new Omnio({
         db: new WasmDb(duckdbBundle, duckdbLogger),
-        fs: new Opfs(`${counter++}`),
+        fs: new Opfs(`${++counter}`),
         logger: __DEBUG__
           ? new omnioLogger.ConsoleLogger()
           : new omnioLogger.VoidLogger(),
@@ -76,6 +76,100 @@ const test = vitest.extend<{
       await omnio.close();
     }
   },
+});
+
+describe("close", () => {
+  test("閉じるときデータを削除できる (NodeFs)", async ({ expect, skip, task }) => {
+    if (__CLIENT__) {
+      skip();
+    }
+
+    const path = await import("node:path");
+    const { stat } = await import("node:fs/promises");
+    const { NodeDb } = await import("../src/db/node-db.js");
+    const { NodeFs } = await import("../src/fs/node-fs.js");
+
+    const testDir = path.join(
+      "tests",
+      ".temp",
+      "omnio.server.test.ts",
+      nowDatetimeString ??= (new Date()).toISOString(),
+      task.name,
+    );
+    const bucketName = "test";
+    const bucketPath = path.join(testDir, "omnio", "buckets", bucketName);
+
+    const omnio = new Omnio({
+      db: new NodeDb(),
+      fs: new NodeFs(testDir),
+      logger: __DEBUG__
+        ? new omnioLogger.ConsoleLogger()
+        : new omnioLogger.VoidLogger(),
+      bucketName,
+    });
+    await omnio.open();
+    await omnio.close();
+
+    await expect(stat(bucketPath))
+      .resolves
+      .not
+      .toThrow();
+
+    await omnio.open();
+    await omnio.close({ purge: true });
+
+    await expect(stat(bucketPath))
+      .rejects
+      .toThrow("ENOENT");
+  });
+
+  test("閉じるときデータを削除できる (Opfs)", async ({ expect, skip }) => {
+    if (__SERVER__) {
+      skip();
+    }
+
+    const bucketName = "test";
+
+    const duckdbBundle = await duckdb.selectBundle({
+      mvp: {
+        mainModule: duckdbWasm,
+        mainWorker: mvpWorker,
+      },
+      eh: {
+        mainModule: duckdbWasmEh,
+        mainWorker: eHworker,
+      },
+    });
+    const duckdbLogger = __DEBUG__
+      ? new duckdb.ConsoleLogger()
+      : new duckdb.VoidLogger();
+    const omnio = new Omnio({
+      db: new WasmDb(duckdbBundle, duckdbLogger),
+      fs: new Opfs(`${++counter}`),
+      logger: __DEBUG__
+        ? new omnioLogger.ConsoleLogger()
+        : new omnioLogger.VoidLogger(),
+      bucketName,
+    });
+    await omnio.open();
+    await omnio.close();
+
+    const buclets = await window.navigator.storage.getDirectory()
+      .then(fs => fs.getDirectoryHandle(`${counter}`))
+      .then(fs => fs.getDirectoryHandle("omnio"))
+      .then(fs => fs.getDirectoryHandle("buckets"));
+    await expect(Array.fromAsync(buclets.keys()))
+      .resolves
+      .toContain(bucketName);
+
+    await omnio.open();
+    await omnio.close({ purge: true });
+
+    await expect(Array.fromAsync(buclets.keys()))
+      .resolves
+      .not
+      .toContain(bucketName);
+  });
 });
 
 describe("putObject", () => {
