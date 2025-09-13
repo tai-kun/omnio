@@ -707,7 +707,7 @@ export default class ObjectFileWriteStream implements AsyncDisposable {
         } catch (ex) {
           // メタデータの作成または更新に失敗したので、新しいエンティティーを削除します。
           try {
-            await this.#directory.removeEntry(this.#entityIds.new);
+            await this.#directory.removeEntry(this.#entityIds.new, { recursive: false });
           } catch (ex) {
             this.#logger.error(
               "ObjectFileWriteStream.close: Failed to remove new entity: " + this.#entityIds.new,
@@ -722,7 +722,7 @@ export default class ObjectFileWriteStream implements AsyncDisposable {
         if (this.#entityIds.old !== undefined && this.#entityIds.old !== this.#entityIds.new) {
           // 新しいエンティティーの保存とメタデータの作成に成功したので、古いエンティティーを削除します。
           try {
-            await this.#directory.removeEntry(this.#entityIds.old);
+            await this.#directory.removeEntry(this.#entityIds.old, { recursive: false });
           } catch (ex) {
             this.#logger.error(
               "ObjectFileWriteStream.close: Failed to remove old entity: " + this.#entityIds.old,
@@ -779,7 +779,7 @@ export default class ObjectFileWriteStream implements AsyncDisposable {
         if (this.#entityIds.old !== undefined && this.#entityIds.old !== this.#entityIds.new) {
           // 新しいエンティティーの保存とメタデータの作成に成功したので、古いエンティティーを削除します。
           try {
-            await this.#directory.removeEntry(this.#entityIds.old);
+            await this.#directory.removeEntry(this.#entityIds.old, { recursive: false });
           } catch (ex) {
             this.#logger.error(
               "ObjectFileWriteStream.close: Failed to remove old entity: " + this.#entityIds.old,
@@ -810,7 +810,7 @@ export default class ObjectFileWriteStream implements AsyncDisposable {
         } catch (ex) {
           // メタデータの作成または更新に失敗したので、新しいエンティティーを削除します。
           try {
-            await this.#directory.removeEntry(this.#entityIds.new);
+            await this.#directory.removeEntry(this.#entityIds.new, { recursive: false });
           } catch (ex) {
             this.#logger.error(
               "ObjectFileWriteStream.close: Failed to remove new entity: " + this.#entityIds.new,
