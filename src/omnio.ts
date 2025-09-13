@@ -1398,7 +1398,10 @@ export default class Omnio {
       args.mimeType ??= v.parse(schemas.MimeType, data.type);
       args.objectTags ??= v.parse(v.optional(schemas.ObjectTags), data.objectTags);
       args.description ??= v.parse(v.nullish(v.string()), data.description);
-      args.userMetadata ??= v.parse(v.optional(v.unknown()), data.userMetadata);
+      // userMetadata は null に意味があるので、undefined のときだけデフォルト値を設定します。
+      if (args.userMetadata === undefined) {
+        args.userMetadata = v.parse(v.optional(v.unknown()), data.userMetadata);
+      }
     } else if (data instanceof File) {
       args.data = toUint8Array(await data.arrayBuffer());
       args.mimeType ??= v.parse(schemas.MimeType, data.type);
