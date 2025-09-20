@@ -224,6 +224,13 @@ export type PutObjectOptions = Readonly<{
    * @default null
    */
   userMetadata?: unknown;
+
+  /**
+   * カスタムのタイムスタンプです。
+   *
+   * @default Date.now()
+   */
+  timestamp?: v.InferInput<typeof schemas.Timestamp> | undefined;
 }>;
 
 /**
@@ -232,6 +239,7 @@ export type PutObjectOptions = Readonly<{
 const PutOptionsSchema = v.object({
   flag: v.optional(schemas.OpenMode, "w"),
   mimeType: v.optional(schemas.MimeType),
+  timestamp: v.optional(schemas.Timestamp),
   objectTags: v.optional(schemas.ObjectTags),
   description: v.nullish(v.string()),
   userMetadata: v.optional(v.unknown()),
@@ -889,6 +897,22 @@ export type SearchResult = {
 };
 
 /**
+ * オブジェクトをコピーするためのオプションです。
+ */
+export type CopyObjectOptions = Readonly<{
+  /**
+   * カスタムのタイムスタンプです。
+   *
+   * @default Date.now()
+   */
+  timestamp?: v.InferInput<typeof schemas.Timestamp> | undefined;
+}>;
+
+const CopyObjectOptionsSchema = v.object({
+  timestamp: v.optional(schemas.Timestamp),
+});
+
+/**
  * オブジェクトのメタデータを更新するためのオプションです。
  */
 export type UpdateObjectMetadataOptions = Readonly<{
@@ -911,6 +935,13 @@ export type UpdateObjectMetadataOptions = Readonly<{
    * ユーザー定義のメタデータです。
    */
   userMetadata?: unknown | undefined;
+
+  /**
+   * カスタムのタイムスタンプです。
+   *
+   * @default Date.now()
+   */
+  timestamp?: v.InferInput<typeof schemas.Timestamp> | undefined;
 }>;
 
 /**
@@ -918,9 +949,26 @@ export type UpdateObjectMetadataOptions = Readonly<{
  */
 const UpdateObjectMetadataOptionsSchema = v.object({
   mimeType: v.optional(schemas.MimeType),
+  timestamp: v.optional(schemas.Timestamp),
   objectTags: v.optional(schemas.ObjectTags),
   description: v.optional(v.nullable(v.string())),
   userMetadata: v.optional(v.unknown()),
+});
+
+/**
+ * オブジェクトを削除するためのオプションです。
+ */
+export type DeleteObjectOptions = Readonly<{
+  /**
+   * カスタムのタイムスタンプです。
+   *
+   * @default Date.now()
+   */
+  timestamp?: v.InferInput<typeof schemas.Timestamp> | undefined;
+}>;
+
+const DeleteObjectOptionsSchema = v.object({
+  timestamp: v.optional(schemas.Timestamp),
 });
 
 /**
@@ -1045,7 +1093,7 @@ export default class Omnio {
   /**
    * Omnio の利用を終了します。
    *
-   * @package options Omnio の利用を終了する際のオプションです。
+   * @param options Omnio の利用を終了する際のオプションです。
    */
   @mutex
   public async close(options: CloseOptions | undefined = {}): Promise<void> {
@@ -1081,6 +1129,7 @@ export default class Omnio {
     const {
       data,
       mimeType,
+      timestamp,
       objectPath,
       objectTags,
       description,
@@ -1136,6 +1185,7 @@ export default class Omnio {
         checksum,
         entityId: newEntityId,
         mimeType,
+        timestamp,
         objectPath,
         objectSize: writer.bytesWritten,
         objectTags,
@@ -1173,6 +1223,7 @@ export default class Omnio {
     const {
       data,
       mimeType,
+      timestamp,
       objectPath,
       objectTags,
       description,
@@ -1257,6 +1308,7 @@ export default class Omnio {
           checksum,
           entityId: newEntityId,
           mimeType,
+          timestamp,
           objectPath,
           objectSize,
           objectTags,
@@ -1272,6 +1324,7 @@ export default class Omnio {
           checksum,
           entityId: newEntityId,
           mimeType,
+          timestamp,
           objectPath,
           objectSize,
           objectTags,
@@ -1310,6 +1363,7 @@ export default class Omnio {
     const {
       data,
       mimeType,
+      timestamp,
       objectPath,
       objectTags,
       description,
@@ -1343,6 +1397,7 @@ export default class Omnio {
         checksum,
         entityId: newEntityId,
         mimeType,
+        timestamp,
         objectPath,
         objectSize: writer.bytesWritten,
         objectTags,
@@ -1381,6 +1436,7 @@ export default class Omnio {
     const {
       flag,
       mimeType,
+      timestamp,
       objectTags,
       description,
       userMetadata,
@@ -1388,6 +1444,7 @@ export default class Omnio {
     const args = {
       data: {} as Uint8Array<ArrayBuffer>,
       mimeType,
+      timestamp,
       objectPath: v.parse(schemas.ObjectPathLike, path),
       objectTags,
       description,
@@ -1941,11 +1998,13 @@ export default class Omnio {
    *
    * @param sourcePath コピー元のオブジェクトパスです。
    * @param destinationPath コピー先のオブジェクトパスです。
+   * @param options オブジェクトをコピーするためのオプションです。
    */
   @mutex
   public async copyObject(
     sourcePath: ObjectPathLike,
     destinationPath: ObjectPathLike,
+    options: CopyObjectOptions | undefined = {},
   ): Promise<void> {
     if (!this.#bucket) {
       throw new Error("Omnio closed");
@@ -1953,6 +2012,7 @@ export default class Omnio {
 
     const srcObjectPath = v.parse(schemas.ObjectPathLike, sourcePath);
     const dstObjectPath = v.parse(schemas.ObjectPathLike, destinationPath);
+    const { timestamp } = v.parse(CopyObjectOptionsSchema, options);
 
     const { entityId: srcEntityId } = await this.#metadata.read({
       select: {
@@ -2007,6 +2067,7 @@ export default class Omnio {
 
     try {
       await this.#metadata.copy({
+        timestamp,
         dstEntityId,
         dstObjectPath,
         srcObjectPath,
@@ -2064,12 +2125,14 @@ export default class Omnio {
     const objectPath = v.parse(schemas.ObjectPathLike, path);
     const {
       mimeType,
+      timestamp,
       objectTags,
       description,
       userMetadata,
     } = v.parse(UpdateObjectMetadataOptionsSchema, options);
     await this.#metadata.update({
       mimeType,
+      timestamp,
       objectPath,
       objectTags,
       description,
@@ -2081,15 +2144,23 @@ export default class Omnio {
    * オブジェクトのメタデータを削除します。
    *
    * @param path オブジェクトパスです。
+   * @param options オブジェクトを削除するためのオプションです。
    */
   @mutex
-  public async deleteObject(path: ObjectPathLike): Promise<void> {
+  public async deleteObject(
+    path: ObjectPathLike,
+    options: DeleteObjectOptions | undefined = {},
+  ): Promise<void> {
     if (!this.#bucket) {
       throw new Error("Omnio closed");
     }
 
     const objectPath = v.parse(schemas.ObjectPathLike, path);
-    const { entityId } = await this.#metadata.trash({ objectPath });
+    const { timestamp } = v.parse(DeleteObjectOptionsSchema, options);
+    const { entityId } = await this.#metadata.trash({
+      timestamp,
+      objectPath,
+    });
     try {
       await this.#bucket.entities.removeEntry(entityId, { recursive: false });
     } catch (ex) {

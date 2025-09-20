@@ -227,6 +227,13 @@ type CreateInput = Readonly<{
    * @default null
    */
   userMetadata: unknown;
+
+  /**
+   * カスタムのタイムスタンプです。
+   *
+   * @default Date.now()
+   */
+  timestamp: v.InferOutput<typeof schemas.Timestamp> | undefined;
 }>;
 
 /**
@@ -288,6 +295,13 @@ type CreateExclusiveInput = Readonly<{
    * @default null
    */
   userMetadata: unknown;
+
+  /**
+   * カスタムのタイムスタンプです。
+   *
+   * @default Date.now()
+   */
+  timestamp: v.InferOutput<typeof schemas.Timestamp> | undefined;
 }>;
 
 /**
@@ -1069,6 +1083,13 @@ type CopyInput = Readonly<{
    * 実際に保存されているオブジェクトの識別子です。
    */
   dstEntityId: v.InferOutput<typeof schemas.EntityId>;
+
+  /**
+   * カスタムのタイムスタンプです。
+   *
+   * @default Date.now()
+   */
+  timestamp: v.InferOutput<typeof schemas.Timestamp> | undefined;
 }>;
 
 /**
@@ -1099,6 +1120,13 @@ type UpdateInput = Readonly<{
    * ユーザー定義のメタデータです。
    */
   userMetadata: unknown | undefined;
+
+  /**
+   * カスタムのタイムスタンプです。
+   *
+   * @default Date.now()
+   */
+  timestamp: v.InferOutput<typeof schemas.Timestamp> | undefined;
 }>;
 
 /**
@@ -1164,6 +1192,13 @@ type UpdateExclusiveInput = Readonly<{
      */
     checksum: v.InferOutput<typeof schemas.Checksum>;
   }>;
+
+  /**
+   * カスタムのタイムスタンプです。
+   *
+   * @default Date.now()
+   */
+  timestamp: v.InferOutput<typeof schemas.Timestamp> | undefined;
 }>;
 
 /**
@@ -1174,6 +1209,13 @@ type TrashInput = Readonly<{
    * バケット内のオブジェクトパスです。
    */
   objectPath: ObjectPath;
+
+  /**
+   * カスタムのタイムスタンプです。
+   *
+   * @default Date.now()
+   */
+  timestamp: v.InferOutput<typeof schemas.Timestamp> | undefined;
 }>;
 
 /**
@@ -1624,6 +1666,7 @@ export default class Metadata {
       checksum,
       entityId,
       mimeType,
+      timestamp,
       objectPath,
       objectSize,
       objectTags = [],
@@ -1637,7 +1680,7 @@ export default class Metadata {
     const md5State = checksum.state.length ? join(checksum.state, ",") : empty;
     const objTags = objectTags.length ? join(objectTags, ",") : empty;
     const objId = getObjectId();
-    const time = (new Date()).toISOString();
+    const time = new Date(timestamp ?? Date.now()).toISOString();
     const stmt: Sql[] = [];
     stmt.push(sql`
       INSERT INTO metadata_v1 (
@@ -1712,6 +1755,7 @@ export default class Metadata {
       checksum,
       entityId,
       mimeType,
+      timestamp,
       objectPath,
       objectSize,
       objectTags = [],
@@ -1725,7 +1769,7 @@ export default class Metadata {
     const md5State = checksum.state.length ? join(checksum.state, ",") : empty;
     const objTags = objectTags.length ? join(objectTags, ",") : empty;
     const objId = getObjectId();
-    const time = (new Date()).toISOString();
+    const time = new Date(timestamp ?? Date.now()).toISOString();
     try {
       await this.#exec(sql`
         INSERT INTO metadata_v1 (
@@ -2428,12 +2472,13 @@ export default class Metadata {
   @mutex
   public async copy(inp: CopyInput): Promise<void> {
     const {
+      timestamp,
       dstEntityId,
       srcObjectPath,
       dstObjectPath,
     } = inp;
     let row: Row | undefined;
-    const time = (new Date()).toISOString();
+    const time = new Date(timestamp ?? Date.now()).toISOString();
     try {
       [row] = await this.#query(sql`
         INSERT INTO metadata_v1 (
@@ -2507,6 +2552,7 @@ export default class Metadata {
   public async update(inp: UpdateInput): Promise<void> {
     const {
       mimeType,
+      timestamp,
       objectPath,
       objectTags,
       description,
@@ -2514,6 +2560,7 @@ export default class Metadata {
     } = inp;
     if (
       mimeType === undefined
+      && timestamp === undefined
       && objectTags === undefined
       && description === undefined
       && userMetadata === undefined
@@ -2562,7 +2609,7 @@ export default class Metadata {
         usermeta = ${meta}`);
     }
 
-    const time = (new Date()).toISOString(); // クエリーを実行する直前に時刻を作成します。
+    const time = new Date(timestamp ?? Date.now()).toISOString(); // クエリーを実行する直前に時刻を作成します。
     stmt.push(sql`,
         rec_time = ${time},
         mod_time = ${time}
@@ -2594,6 +2641,7 @@ export default class Metadata {
       checksum,
       entityId,
       mimeType,
+      timestamp,
       objectPath,
       objectSize,
       objectTags,
@@ -2640,7 +2688,7 @@ export default class Metadata {
     try {
       await this.#exec(sql`BEGIN TRANSACTION`);
 
-      const time = (new Date()).toISOString(); // クエリーを実行する直前に時刻を作成します。
+      const time = new Date(timestamp ?? Date.now()).toISOString(); // クエリーを実行する直前に時刻を作成します。
       stmt.push(sql`,
         rec_time = ${time},
         mod_time = ${time}
@@ -2696,8 +2744,11 @@ export default class Metadata {
    */
   @mutex
   public async trash(inp: TrashInput): Promise<TrashOutput> {
-    const { objectPath } = inp;
-    const time = (new Date()).toISOString();
+    const {
+      timestamp,
+      objectPath,
+    } = inp;
+    const time = new Date(timestamp ?? Date.now()).toISOString();
     const [row] = await this.#query(sql`
       UPDATE
         metadata_v1

@@ -112,6 +112,7 @@ describe("create", () => {
       },
       entityId: asEntityId("01989d2b-9d77-7988-ac2d-23659f27b88f"),
       mimeType: asMimeType("text/plain"),
+      timestamp: undefined,
       objectPath: ObjectPath.parse("file.txt"),
       objectSize: asUint(0),
       objectTags: asObjectTags([]),
@@ -131,6 +132,7 @@ describe("create", () => {
       },
       entityId: asEntityId("01989d2b-9d77-7988-ac2d-23659f27b88f"),
       mimeType: asMimeType("text/plain"),
+      timestamp: undefined,
       objectPath: ObjectPath.parse("path/to/file.txt"),
       objectSize: asUint(0),
       objectTags: asObjectTags([]),
@@ -147,6 +149,7 @@ describe("create", () => {
       },
       entityId: asEntityId("0198a275-bad6-7e39-8541-ed79afda8c84"),
       mimeType: asMimeType("application/octet-stream"),
+      timestamp: undefined,
       objectPath: ObjectPath.parse("path/to/file.txt"),
       objectSize: asUint(128),
       objectTags: asObjectTags(["foo"]),
@@ -194,6 +197,7 @@ describe("create", () => {
       },
       entityId: asEntityId("01989d2b-9d77-7988-ac2d-23659f27b88f"),
       mimeType: asMimeType("text/plain"),
+      timestamp: undefined,
       objectPath: ObjectPath.parse("file-1.txt"),
       objectSize: asUint(0),
       objectTags: asObjectTags([]),
@@ -210,6 +214,7 @@ describe("create", () => {
       },
       entityId: asEntityId("01989d2b-9d77-7988-ac2d-23659f27b88f"),
       mimeType: asMimeType("text/plain"),
+      timestamp: undefined,
       objectPath: ObjectPath.parse("file-2.txt"),
       objectSize: asUint(0),
       objectTags: asObjectTags([]),
@@ -220,6 +225,38 @@ describe("create", () => {
       .toThrow(
         "Duplicate key \"entityid: 01989d2b-9d77-7988-ac2d-23659f27b88f\" violates unique constraint.",
       );
+  });
+
+  test("タイムスタンプを指定して作成できる", async ({ metadata, expect }) => {
+    await expect(metadata.create({
+      checksum: {
+        value: asChecksum("00000000000000000000000000000000"),
+        state: asHashState([]),
+      },
+      entityId: asEntityId("01989d2b-9d77-7988-ac2d-23659f27b88f"),
+      mimeType: asMimeType("text/plain"),
+      timestamp: asTimestamp("2025-09-20T00:06:39.623Z"),
+      objectPath: ObjectPath.parse("path/to/file.txt"),
+      objectSize: asUint(0),
+      objectTags: asObjectTags([]),
+      description: null,
+      userMetadata: null,
+    }))
+      .resolves
+      .not
+      .toThrow();
+    await expect(metadata.read({
+      select: {
+        lastModifiedAt: true,
+      },
+      where: {
+        objectPath: ObjectPath.parse("path/to/file.txt"),
+      },
+    }))
+      .resolves
+      .toStrictEqual({
+        lastModifiedAt: Date.parse("2025-09-20T00:06:39.623Z"),
+      });
   });
 });
 
@@ -232,6 +269,7 @@ describe("createExclusive", () => {
       },
       entityId: asEntityId("01989d2b-9d77-7988-ac2d-23659f27b88f"),
       mimeType: asMimeType("text/plain"),
+      timestamp: undefined,
       objectPath: ObjectPath.parse("file.txt"),
       objectSize: asUint(0),
       objectTags: asObjectTags([]),
@@ -251,6 +289,7 @@ describe("createExclusive", () => {
       },
       entityId: asEntityId("01989d2b-9d77-7988-ac2d-23659f27b88f"),
       mimeType: asMimeType("text/plain"),
+      timestamp: undefined,
       objectPath: ObjectPath.parse("path/to/file.txt"),
       objectSize: asUint(0),
       objectTags: asObjectTags([]),
@@ -267,6 +306,7 @@ describe("createExclusive", () => {
       },
       entityId: asEntityId("0198a275-bad6-7e39-8541-ed79afda8c84"),
       mimeType: asMimeType("text/plain"),
+      timestamp: undefined,
       objectPath: ObjectPath.parse("path/to/file.txt"),
       objectSize: asUint(0),
       objectTags: asObjectTags([]),
@@ -285,6 +325,7 @@ describe("createExclusive", () => {
       },
       entityId: asEntityId("01989d2b-9d77-7988-ac2d-23659f27b88f"),
       mimeType: asMimeType("text/plain"),
+      timestamp: undefined,
       objectPath: ObjectPath.parse("path/to/file.txt"),
       objectSize: asUint(0),
       objectTags: asObjectTags([]),
@@ -303,6 +344,7 @@ describe("createExclusive", () => {
       },
       entityId: asEntityId("01989d2b-9d77-7988-ac2d-23659f27b88f"),
       mimeType: asMimeType("text/plain"),
+      timestamp: undefined,
       objectPath: ObjectPath.parse("path/to/file.txt"),
       objectSize: asUint(0),
       objectTags: asObjectTags([]),
@@ -321,6 +363,7 @@ describe("createExclusive", () => {
       },
       entityId: asEntityId("01989d2b-9d77-7988-ac2d-23659f27b88f"),
       mimeType: asMimeType("text/plain"),
+      timestamp: undefined,
       objectPath: ObjectPath.parse("file-1.txt"),
       objectSize: asUint(0),
       objectTags: asObjectTags([]),
@@ -337,6 +380,7 @@ describe("createExclusive", () => {
       },
       entityId: asEntityId("01989d2b-9d77-7988-ac2d-23659f27b88f"),
       mimeType: asMimeType("text/plain"),
+      timestamp: undefined,
       objectPath: ObjectPath.parse("file-2.txt"),
       objectSize: asUint(0),
       objectTags: asObjectTags([]),
@@ -359,6 +403,7 @@ describe("read", () => {
       },
       entityId: asEntityId("01989d2b-9d77-7988-ac2d-23659f27b88f"),
       mimeType: asMimeType("text/plain"),
+      timestamp: undefined,
       objectPath: ObjectPath.parse("file.txt"),
       objectSize: asUint(0),
       objectTags: asObjectTags(["foo", "bar"]),
@@ -420,6 +465,7 @@ describe("read", () => {
       },
       entityId: asEntityId("01989d2b-9d77-7988-ac2d-23659f27b88f"),
       mimeType: asMimeType("text/plain"),
+      timestamp: undefined,
       objectPath: ObjectPath.parse("file.txt"),
       objectSize: asUint(0),
       objectTags: asObjectTags([]),
@@ -469,6 +515,7 @@ describe("read", () => {
       },
       entityId: asEntityId("01989d2b-9d77-7988-ac2d-23659f27b88f"),
       mimeType: asMimeType("text/plain"),
+      timestamp: undefined,
       objectPath: ObjectPath.parse("file.txt"),
       objectSize: asUint(0),
       objectTags: asObjectTags([]),
@@ -506,6 +553,7 @@ describe("readInternal", () => {
       },
       entityId: asEntityId("01989d2b-9d77-7988-ac2d-23659f27b88f"),
       mimeType: asMimeType("text/plain"),
+      timestamp: undefined,
       objectPath: ObjectPath.parse("file.txt"),
       objectSize: asUint(0),
       objectTags: asObjectTags(["foo", "bar"]),
@@ -543,6 +591,7 @@ describe("exists", () => {
       },
       entityId: asEntityId("01989d2b-9d77-7988-ac2d-23659f27b88f"),
       mimeType: asMimeType("text/plain"),
+      timestamp: undefined,
       objectPath: ObjectPath.parse("file.txt"),
       objectSize: asUint(0),
       objectTags: asObjectTags(["foo", "bar"]),
@@ -577,6 +626,7 @@ describe("exists", () => {
       },
       entityId: asEntityId("01989d2b-9d77-7988-ac2d-23659f27b88f"),
       mimeType: asMimeType("text/plain"),
+      timestamp: undefined,
       objectPath,
       objectSize: asUint(0),
       objectTags: asObjectTags(["foo", "bar"]),
@@ -638,6 +688,7 @@ describe("stat", () => {
         },
         entityId: getEntityId(),
         mimeType: asMimeType("text/plain"),
+        timestamp: undefined,
         objectPath: ObjectPath.parse(path),
         objectSize: asUint(0),
         objectTags: asObjectTags([]),
@@ -710,6 +761,7 @@ describe("search", () => {
         },
         entityId: getEntityId(),
         mimeType: asMimeType("text/plain"),
+        timestamp: undefined,
         objectPath: ObjectPath.parse(path),
         objectSize: asUint(0),
         objectTags: asObjectTags([]),
@@ -841,6 +893,7 @@ describe("search", () => {
         },
         entityId: getEntityId(),
         mimeType: asMimeType("text/plain"),
+        timestamp: undefined,
         objectPath: ObjectPath.parse(path),
         objectSize: asUint(0),
         objectTags: asObjectTags([]),
@@ -939,6 +992,7 @@ describe("list", () => {
         },
         entityId: getEntityId(),
         mimeType: asMimeType("text/plain"),
+        timestamp: undefined,
         objectPath: ObjectPath.parse(path),
         objectSize: asUint(0),
         objectTags: asObjectTags([]),
@@ -1007,6 +1061,7 @@ describe("list", () => {
         },
         entityId: getEntityId(),
         mimeType: asMimeType("text/plain"),
+        timestamp: undefined,
         objectPath: ObjectPath.parse(path),
         objectSize: asUint(0),
         objectTags: asObjectTags([]),
@@ -1069,6 +1124,7 @@ describe("list", () => {
         },
         entityId: getEntityId(),
         mimeType: asMimeType("text/plain"),
+        timestamp: undefined,
         objectPath: ObjectPath.parse(path),
         objectSize: asUint(0),
         objectTags: asObjectTags([]),
@@ -1242,6 +1298,7 @@ describe("move", () => {
       },
       entityId: asEntityId("01989d2b-9d77-7988-ac2d-23659f27b88f"),
       mimeType: asMimeType("text/plain"),
+      timestamp: undefined,
       objectPath: srcObjectPath,
       objectSize: asUint(0),
       objectTags: asObjectTags([]),
@@ -1303,6 +1360,7 @@ describe("move", () => {
       },
       entityId: asEntityId("01989d2b-9d77-7988-ac2d-23659f27b88f"),
       mimeType: asMimeType("text/plain"),
+      timestamp: undefined,
       objectPath: srcObjectPath,
       objectSize: asUint(0),
       objectTags: asObjectTags([]),
@@ -1319,6 +1377,7 @@ describe("move", () => {
       },
       entityId: asEntityId("0198a275-bad6-7e39-8541-ed79afda8c84"),
       mimeType: asMimeType("text/plain"),
+      timestamp: undefined,
       objectPath: dstObjectPath,
       objectSize: asUint(0),
       objectTags: asObjectTags([]),
@@ -1349,6 +1408,7 @@ describe("copy", () => {
       },
       entityId: asEntityId("01989d2b-9d77-7988-ac2d-23659f27b88f"),
       mimeType: asMimeType("text/plain"),
+      timestamp: undefined,
       objectPath: srcObjectPath,
       objectSize: asUint(0),
       objectTags: asObjectTags([]),
@@ -1362,6 +1422,7 @@ describe("copy", () => {
       srcObjectPath,
       dstObjectPath,
       dstEntityId: asEntityId("01989d2b-9d77-7988-ac2d-23659f27b88f"),
+      timestamp: undefined,
     }))
       .rejects
       .toThrowError(
@@ -1371,6 +1432,7 @@ describe("copy", () => {
       srcObjectPath,
       dstObjectPath,
       dstEntityId: asEntityId("0198a275-bad6-7e39-8541-ed79afda8c84"),
+      timestamp: undefined,
     }))
       .resolves
       .not
@@ -1401,6 +1463,7 @@ describe("copy", () => {
       srcObjectPath,
       dstObjectPath,
       dstEntityId: asEntityId("01989d2b-9d77-7988-ac2d-23659f27b88f"),
+      timestamp: undefined,
     }))
       .rejects
       .toThrow(ObjectNotFoundError);
@@ -1417,6 +1480,7 @@ describe("copy", () => {
       },
       entityId: asEntityId("01989d2b-9d77-7988-ac2d-23659f27b88f"),
       mimeType: asMimeType("text/plain"),
+      timestamp: undefined,
       objectPath: srcObjectPath,
       objectSize: asUint(0),
       objectTags: asObjectTags([]),
@@ -1433,6 +1497,7 @@ describe("copy", () => {
       },
       entityId: asEntityId("0198a275-bad6-7e39-8541-ed79afda8c84"),
       mimeType: asMimeType("text/plain"),
+      timestamp: undefined,
       objectPath: dstObjectPath,
       objectSize: asUint(0),
       objectTags: asObjectTags([]),
@@ -1446,6 +1511,7 @@ describe("copy", () => {
       srcObjectPath,
       dstObjectPath,
       dstEntityId: asEntityId("2583336f-678e-4ca8-81a3-8c71f922c047"),
+      timestamp: undefined,
     }))
       .rejects
       .toThrow(ObjectExistsError);
@@ -1463,6 +1529,7 @@ describe("update", () => {
       },
       entityId: asEntityId("01989d2b-9d77-7988-ac2d-23659f27b88f"),
       mimeType: asMimeType("text/plain"),
+      timestamp: undefined,
       objectPath,
       objectSize: asUint(0),
       objectTags: asObjectTags([]),
@@ -1479,6 +1546,7 @@ describe("update", () => {
     await expect(metadata.update({
       objectPath,
       mimeType: asMimeType("application/json"),
+      timestamp: undefined,
       objectTags: undefined,
       description: undefined,
       userMetadata: undefined,
@@ -1503,6 +1571,7 @@ describe("update", () => {
     await expect(metadata.update({
       objectPath,
       mimeType: undefined,
+      timestamp: undefined,
       objectTags: undefined,
       description: "new description",
       userMetadata: undefined,
@@ -1527,6 +1596,7 @@ describe("update", () => {
     await expect(metadata.update({
       objectPath,
       mimeType: undefined,
+      timestamp: undefined,
       objectTags: undefined,
       description: undefined,
       userMetadata: {
@@ -1557,6 +1627,7 @@ describe("update", () => {
     await expect(metadata.update({
       objectPath,
       mimeType: undefined,
+      timestamp: undefined,
       objectTags: undefined,
       description: null,
       userMetadata: undefined,
@@ -1581,6 +1652,7 @@ describe("update", () => {
     await expect(metadata.update({
       objectPath,
       mimeType: undefined,
+      timestamp: undefined,
       objectTags: undefined,
       description: undefined,
       userMetadata: null,
@@ -1608,6 +1680,7 @@ describe("update", () => {
     await expect(metadata.update({
       objectPath,
       mimeType: undefined,
+      timestamp: undefined,
       objectTags: undefined,
       description: undefined,
       userMetadata: undefined,
@@ -1617,6 +1690,7 @@ describe("update", () => {
     await expect(metadata.update({
       objectPath,
       mimeType: undefined,
+      timestamp: undefined,
       objectTags: undefined,
       description: undefined,
       userMetadata: null,
@@ -1635,6 +1709,7 @@ describe("update", () => {
       },
       entityId: asEntityId("01989d2b-9d77-7988-ac2d-23659f27b88f"),
       mimeType: asMimeType("text/plain"),
+      timestamp: undefined,
       objectPath,
       objectSize: asUint(0),
       objectTags: asObjectTags([]),
@@ -1665,6 +1740,7 @@ describe("update", () => {
     await expect(metadata.update({
       objectPath,
       mimeType: undefined,
+      timestamp: undefined,
       objectTags: undefined,
       description: "new",
       userMetadata: undefined,
@@ -1716,6 +1792,7 @@ describe("updateExclusive", () => {
       },
       entityId: asEntityId("01989d2b-9d77-7988-ac2d-23659f27b88f"),
       mimeType: asMimeType("text/plain"),
+      timestamp: undefined,
       objectPath,
       objectSize: asUint(0),
       objectTags: asObjectTags([]),
@@ -1740,6 +1817,7 @@ describe("updateExclusive", () => {
       },
       entityId: undefined,
       mimeType: asMimeType("application/json"),
+      timestamp: undefined,
       objectSize: asUint(128),
       objectTags: undefined,
       description: undefined,
@@ -1776,6 +1854,7 @@ describe("updateExclusive", () => {
       },
       entityId: undefined,
       mimeType: asMimeType("application/json"),
+      timestamp: undefined,
       objectSize: asUint(128),
       objectTags: undefined,
       description: undefined,
@@ -1795,6 +1874,7 @@ describe("updateExclusive", () => {
       },
       entityId: asEntityId("01989d2b-9d77-7988-ac2d-23659f27b88f"),
       mimeType: asMimeType("text/plain"),
+      timestamp: undefined,
       objectPath,
       objectSize: asUint(0),
       objectTags: asObjectTags([]),
@@ -1818,6 +1898,7 @@ describe("updateExclusive", () => {
       },
       entityId: undefined,
       mimeType: undefined,
+      timestamp: undefined,
       objectSize: asUint(128),
       objectTags: undefined,
       description: undefined,
@@ -1842,6 +1923,7 @@ describe("trash, listInTrash", () => {
       },
       entityId: asEntityId("01989d2b-9d77-7988-ac2d-23659f27b88f"),
       mimeType: asMimeType("text/plain"),
+      timestamp: undefined,
       objectPath,
       objectSize: asUint(0),
       objectTags: asObjectTags([]),
@@ -1851,7 +1933,10 @@ describe("trash, listInTrash", () => {
       .resolves
       .not
       .toThrow();
-    await expect(metadata.trash({ objectPath }))
+    await expect(metadata.trash({
+      objectPath,
+      timestamp: undefined,
+    }))
       .resolves
       .toStrictEqual({
         entityId: "01989d2b-9d77-7988-ac2d-23659f27b88f",
@@ -1887,7 +1972,10 @@ describe("trash, listInTrash", () => {
   test("存在しないメタデータに削除フラグを立てようとしてエラー", async ({ metadata, expect }) => {
     const objectPath = ObjectPath.parse("file.txt");
 
-    await expect(metadata.trash({ objectPath }))
+    await expect(metadata.trash({
+      objectPath,
+      timestamp: undefined,
+    }))
       .rejects
       .toThrow(ObjectNotFoundError);
   });
@@ -1902,6 +1990,7 @@ describe("trash, listInTrash", () => {
       },
       entityId: asEntityId("01989d2b-9d77-7988-ac2d-23659f27b88f"),
       mimeType: asMimeType("text/plain"),
+      timestamp: undefined,
       objectPath,
       objectSize: asUint(0),
       objectTags: asObjectTags([]),
@@ -1911,12 +2000,18 @@ describe("trash, listInTrash", () => {
       .resolves
       .not
       .toThrow();
-    await expect(metadata.trash({ objectPath }))
+    await expect(metadata.trash({
+      objectPath,
+      timestamp: undefined,
+    }))
       .resolves
       .toStrictEqual({
         entityId: "01989d2b-9d77-7988-ac2d-23659f27b88f",
       });
-    await expect(metadata.trash({ objectPath }))
+    await expect(metadata.trash({
+      objectPath,
+      timestamp: undefined,
+    }))
       .rejects
       .toThrow(ObjectNotFoundError);
   });
@@ -1931,6 +2026,7 @@ describe("trash, listInTrash", () => {
       },
       entityId: asEntityId("01989d2b-9d77-7988-ac2d-23659f27b88f"),
       mimeType: asMimeType("text/plain"),
+      timestamp: undefined,
       objectPath,
       objectSize: asUint(0),
       objectTags: asObjectTags([]),
@@ -1958,7 +2054,10 @@ describe("trash, listInTrash", () => {
           searchScore: expect.any(Number),
         },
       ]);
-    await expect(metadata.trash({ objectPath }))
+    await expect(metadata.trash({
+      objectPath,
+      timestamp: undefined,
+    }))
       .resolves
       .toStrictEqual({
         entityId: "01989d2b-9d77-7988-ac2d-23659f27b88f",
@@ -1990,6 +2089,7 @@ describe("delete", () => {
       },
       entityId,
       mimeType: asMimeType("text/plain"),
+      timestamp: undefined,
       objectPath,
       objectSize: asUint(0),
       objectTags: asObjectTags([]),
@@ -2040,6 +2140,7 @@ describe("delete", () => {
       },
       entityId,
       mimeType: asMimeType("text/plain"),
+      timestamp: undefined,
       objectPath,
       objectSize: asUint(0),
       objectTags: asObjectTags([]),
@@ -2049,7 +2150,10 @@ describe("delete", () => {
       .resolves
       .not
       .toThrow();
-    await expect(metadata.trash({ objectPath }))
+    await expect(metadata.trash({
+      objectPath,
+      timestamp: undefined,
+    }))
       .resolves
       .toStrictEqual({
         entityId,
@@ -2095,4 +2199,8 @@ function asObjectTags(tags: readonly string[]) {
 
 function asHashState(state: readonly number[]) {
   return v.parse(schemas.HashState, state);
+}
+
+function asTimestamp(timestamp: v.InferInput<typeof schemas.Timestamp>) {
+  return v.parse(schemas.Timestamp, timestamp);
 }
