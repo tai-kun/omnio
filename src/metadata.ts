@@ -812,10 +812,22 @@ type ListInput = Readonly<{
   orderBy: Readonly<{
     /**
      * オブジェクト名の並び順です。
-     *
-     * @default "ASC"
      */
-    name: v.InferOutput<typeof schemas.OrderType> | undefined;
+    name: Readonly<{
+      /**
+       * 並び順です。
+       *
+       * @default "ASC"
+       */
+      type: v.InferOutput<typeof schemas.OrderType> | undefined;
+
+      /**
+       * 照合順序です。
+       *
+       * @default "ja"
+       */
+      collate: string | undefined;
+    }>;
 
     /**
      * オブジェクトを先頭にします。
@@ -1347,6 +1359,17 @@ export default class Metadata {
   #open: boolean;
 
   /**
+   * 照合順序の一覧です。
+   */
+  #collations: readonly string[];
+
+  /**
+   * オブジェクトを検索する際に、インデックスを更新すべきかを示すフラグです。
+   * オブジェクトの説明文に変更があったあと、検索前にインデックスを作成/再作成する必要があります。
+   */
+  #shouldUpdateFtsIndex: boolean;
+
+  /**
    * メタデータを記録するためのデータベースです。
    */
   readonly #db: Db;
@@ -1413,12 +1436,6 @@ export default class Metadata {
   readonly #columnsInTrash: readonly Column<keyof NonNullable<ListInTrashInput["select"]>>[];
 
   /**
-   * オブジェクトを検索する際に、インデックスを更新すべきかを示すフラグです。
-   * オブジェクトの説明文に変更があったあと、検索前にインデックスを作成/再作成する必要があります。
-   */
-  #shouldUpdateFtsIndex: boolean;
-
-  /**
    * `Metadata` の新しいインスタンスを構築します。
    *
    * @param inp `Metadata` を構築するための入力パラメーターです。
@@ -1444,6 +1461,8 @@ export default class Metadata {
     const parseUserMeta = v.parser(userMetaSchema);
 
     this.#open = false;
+    this.#collations = [];
+    this.#shouldUpdateFtsIndex = true; // 初回は必ずインデックスを更新します。
     this.#db = db;
     this.#fs = fs;
     this.#logger = logger;
@@ -1499,7 +1518,6 @@ export default class Metadata {
       recordTimestamp: ["record_timestamp", schemas.Timestamp],
       checksumAlgorithm: ["checksum_algorithm", v.literal("MD5")],
     });
-    this.#shouldUpdateFtsIndex = true; // 初回は必ずインデックスを更新します。
   }
 
   /**
@@ -1612,20 +1630,24 @@ export default class Metadata {
     );
     await this.#db.open(path);
 
-    // マイグレーションを行います。
     try {
-      this.#open = true; // `.#query` を使うために、フラグを true にします。
+      // マイグレーションを行います。
+      this.#open = true; // `.#exec`, `.#query` を使うために、フラグを true にします。
       for (const sql of migrations) {
         await this.#exec(sql({
           bucketName: this.#bucketName,
         }));
       }
 
+      await this.#exec(sql`PRAGMA collations`);
+      const rows = await this.#query(sql`SELECT list(collname) AS a FROM pragma_collations()`);
+      const [{ a: collations }] = v.parse(v.tuple([v.object({ a: v.array(v.string()) })]), rows);
+      this.#collations = collations;
+
       await this.#flush();
     } catch (ex) {
       this.#open = false; // フラグを元に戻します。
 
-      // データベースはファイルを利用しているため、データベース -> ファイルシステムの順番で閉じます。
       try {
         await this.#db.close();
       } catch (ex) {
@@ -1651,8 +1673,17 @@ export default class Metadata {
     // 変更の反映後にデータベースを閉じます。
     await this.#db.close();
 
-    // フラグを更新します。
+    // 内部変数を初期値に戻します。
     this.#open = false;
+    this.#collations = [];
+    this.#shouldUpdateFtsIndex = true;
+  }
+
+  /**
+   * 照合順序の一覧です。
+   */
+  get collations(): string[] {
+    return this.#collations.slice();
   }
 
   /**
@@ -2033,7 +2064,10 @@ export default class Metadata {
       },
       select,
       orderBy: {
-        name: nameOrder = "ASC",
+        name: {
+          type: nameOrderType = "ASC",
+          collate: nameOrderCollate = "ja",
+        },
       },
     } = inp;
 
@@ -2076,7 +2110,7 @@ export default class Metadata {
 
     stmt.push(sql`
       ORDER BY
-        "name" ${raw(nameOrder)}`);
+        "name" COLLATE ${raw(JSON.stringify(nameOrderCollate))} ${raw(nameOrderType)}`);
 
     // ページネーションを適用します。
     if (take !== undefined && take > 0) {
@@ -2108,7 +2142,10 @@ export default class Metadata {
         dirPath,
       },
       orderBy: {
-        name: nameOrder = "ASC",
+        name: {
+          type: nameOrderType = "ASC",
+          collate: nameOrderCollate = "ja",
+        },
       },
     } = inp;
 
@@ -2131,7 +2168,7 @@ export default class Metadata {
 
     stmt.push(sql`
       ORDER BY
-        "name" ${raw(nameOrder)}`);
+        "name" COLLATE ${raw(JSON.stringify(nameOrderCollate))} ${raw(nameOrderType)}`);
 
     // ページネーションを適用します。
     if (take !== undefined && take > 0) {
@@ -2184,7 +2221,10 @@ export default class Metadata {
       },
       select,
       orderBy: {
-        name: nameOrder = "ASC",
+        name: {
+          type: nameOrderType = "ASC",
+          collate: nameOrderCollate = "ja",
+        },
         preferObject = false,
       },
     } = inp;
@@ -2231,7 +2271,7 @@ export default class Metadata {
     stmt.push(sql`
       ORDER BY
         "isObject" ${raw(preferObject ? "DESC" : "ASC")},
-        "name" ${raw(nameOrder)}`);
+        "name" COLLATE ${raw(JSON.stringify(nameOrderCollate))} ${raw(nameOrderType)}`);
 
     // ページネーションを適用します。
     if (take !== undefined && take > 0) {

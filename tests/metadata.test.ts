@@ -1018,7 +1018,10 @@ describe("list", () => {
         take: undefined,
         skip: undefined,
         orderBy: {
-          name: undefined,
+          name: {
+            type: undefined,
+            collate: undefined,
+          },
           preferObject: undefined,
         },
       }),
@@ -1083,7 +1086,10 @@ describe("list", () => {
         take: undefined,
         skip: undefined,
         orderBy: {
-          name: undefined,
+          name: {
+            type: undefined,
+            collate: undefined,
+          },
           preferObject: undefined,
         },
       }),
@@ -1150,7 +1156,10 @@ describe("list", () => {
         take: undefined,
         skip: undefined,
         orderBy: {
-          name: undefined,
+          name: {
+            type: undefined,
+            collate: undefined,
+          },
           preferObject: undefined,
         },
       }),
@@ -1198,7 +1207,10 @@ describe("list", () => {
         take: undefined,
         skip: undefined,
         orderBy: {
-          name: undefined,
+          name: {
+            type: undefined,
+            collate: undefined,
+          },
           preferObject: undefined,
         },
       }),
@@ -1235,7 +1247,10 @@ describe("list", () => {
         take: undefined,
         skip: undefined,
         orderBy: {
-          name: undefined,
+          name: {
+            type: undefined,
+            collate: undefined,
+          },
           preferObject: undefined,
         },
       }),
@@ -1271,7 +1286,10 @@ describe("list", () => {
         take: undefined,
         skip: undefined,
         orderBy: {
-          name: undefined,
+          name: {
+            type: undefined,
+            collate: undefined,
+          },
           preferObject: undefined,
         },
       }),

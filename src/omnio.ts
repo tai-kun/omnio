@@ -739,9 +739,26 @@ export type ListQuery = Readonly<{
       /**
        * オブジェクト名の並び順です。
        *
-       * @default "ASC"
+       * @default { type: "ASC", collate: "ja" }
        */
-      name?: v.InferInput<typeof schemas.OrderType> | undefined;
+      name?:
+        | v.InferInput<typeof schemas.OrderType>
+        | Readonly<{
+          /**
+           * 並び順です。
+           *
+           * @default "ASC"
+           */
+          type?: v.InferInput<typeof schemas.OrderType> | undefined;
+
+          /**
+           * 照合順序です。
+           *
+           * @default "ja"
+           */
+          collate?: string | undefined;
+        }>
+        | undefined;
 
       /**
        * オブジェクトを先頭にします。
@@ -756,7 +773,7 @@ export type ListQuery = Readonly<{
 /**
  * ディレクトリーまたはオブジェクトをリストアップするためのクエリーです。
  */
-const ListQuerySchema = v.object({
+const ListQuerySchemaBase = {
   select: v.optional(v.object({
     bucket: v.optional(v.boolean()),
     id: v.optional(v.boolean()),
@@ -780,11 +797,28 @@ const ListQuerySchema = v.object({
   }),
   skip: v.optional(schemas.UnsignedInteger),
   take: v.optional(schemas.UnsignedInteger),
-  orderBy: v.optional(v.object({
-    name: v.optional(schemas.OrderType),
-    preferObject: v.optional(v.boolean()),
-  })),
-});
+};
+
+const createListQuerySchema = (collations: readonly string[]) =>
+  v.object({
+    ...ListQuerySchemaBase,
+    orderBy: v.optional(v.object({
+      name: v.optional(v.union([
+        v.pipe(
+          schemas.OrderType,
+          v.transform(orderType => ({
+            type: orderType,
+            collate: undefined,
+          })),
+        ),
+        v.object({
+          type: v.optional(schemas.OrderType),
+          collate: v.optional(v.union(collations.map(c => v.literal(c)))),
+        }),
+      ])),
+      preferObject: v.optional(v.boolean()),
+    })),
+  });
 
 /**
  * ディレクトリーをリストアップした結果です。
@@ -991,6 +1025,8 @@ export default class Omnio {
    */
   #bucket: Readonly<Record<"entities", DirectoryHandle>> | null;
 
+  #ListQuerySchema: ReturnType<typeof createListQuerySchema> | null;
+
   /**
    * ファイルシステムです。
    */
@@ -1043,6 +1079,7 @@ export default class Omnio {
       maxUserMetadataJsonSize,
     });
     this.bucketName = bucketName;
+    this.#ListQuerySchema = null;
   }
 
   /**
@@ -1071,6 +1108,7 @@ export default class Omnio {
       this.#bucket = {
         entities: await bucket.getDirectoryHandle("entities", { create: true }),
       };
+      this.#ListQuerySchema = createListQuerySchema(this.#metadata.collations);
     } catch (ex) {
       this.#bucket = null;
 
@@ -1118,6 +1156,7 @@ export default class Omnio {
     // ファイルシステムを閉じます。
     await this.#fs.close();
     this.#bucket = null;
+    this.#ListQuerySchema = null;
   }
 
   async #writeObject(
@@ -1835,6 +1874,10 @@ export default class Omnio {
   public async getObjectMetadata<const Tquery extends GetObjectMetadataQuery>(
     query: Tquery,
   ): Promise<GetObjectMetadataResult<$Get<Tquery, "select">>> {
+    if (!this.#bucket) {
+      throw new Error("Omnio closed");
+    }
+
     const {
       where,
       select,
@@ -1877,6 +1920,10 @@ export default class Omnio {
 
   @mutex.readonly
   public async existsPath(path: ObjectPathLike | readonly string[]): Promise<boolean> {
+    if (!this.#bucket) {
+      throw new Error("Omnio closed");
+    }
+
     if (Array.isArray(path)) {
       return await this.existsDirectory(path);
     } else {
@@ -1892,6 +1939,10 @@ export default class Omnio {
    */
   @mutex.readonly
   public async existsObject(path: ObjectPathLike): Promise<boolean> {
+    if (!this.#bucket) {
+      throw new Error("Omnio closed");
+    }
+
     const objectPath = v.parse(schemas.ObjectPathLike, path);
     const { exists } = await this.#metadata.exists({ objectPath });
 
@@ -1906,6 +1957,10 @@ export default class Omnio {
    */
   @mutex.readonly
   public async existsDirectory(directoryPath: readonly string[]): Promise<boolean> {
+    if (!this.#bucket) {
+      throw new Error("Omnio closed");
+    }
+
     const dirPath = directoryPath; // TODO: 入力値検証
     const { exists } = await this.#metadata.exists({ dirPath });
 
@@ -1919,6 +1974,10 @@ export default class Omnio {
    */
   @mutex.readonly
   public async statPath(path: ObjectPathLike): Promise<Stats> {
+    if (!this.#bucket) {
+      throw new Error("Omnio closed");
+    }
+
     const objectPath = v.parse(schemas.ObjectPathLike, path);
     const stats = await this.#metadata.stat({ objectPath });
 
@@ -1936,13 +1995,17 @@ export default class Omnio {
   public async list<const TQuery extends ListQuery>(
     query: TQuery,
   ): Promise<List<ListItem<$Get<TQuery, "select">, $Get<$Get<TQuery, "where">, "isObject">>>> {
+    if (!this.#bucket) {
+      throw new Error("Omnio closed");
+    }
+
     const {
       skip,
       take,
       where,
       select,
       orderBy = {},
-    } = v.parse(ListQuerySchema, query);
+    } = v.parse(this.#ListQuerySchema!, query);
     const list = await this.#metadata.list({
       skip,
       take,
@@ -1952,7 +2015,10 @@ export default class Omnio {
       },
       select,
       orderBy: {
-        name: orderBy.name,
+        name: {
+          type: orderBy.name?.type,
+          collate: orderBy.name?.collate,
+        },
         preferObject: orderBy.preferObject,
       },
     });
@@ -1974,6 +2040,10 @@ export default class Omnio {
     query: string,
     options: SearchObjectsOptions = {},
   ): Promise<List<SearchResult>> {
+    if (!this.#bucket) {
+      throw new Error("Omnio closed");
+    }
+
     const dirPath = directoryPath; // TODO: 入力値検証
     const {
       skip,
