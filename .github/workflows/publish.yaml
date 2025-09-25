@@ -63,6 +63,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: "公開"
-        run: npm publish --access public
+        run: |
+          npm adduser --registry https://registry.npmjs.org/
+          npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
