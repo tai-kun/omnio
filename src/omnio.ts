@@ -287,6 +287,11 @@ export type CreateWriteStreamOptions = Readonly<{
    * @default null
    */
   userMetadata?: unknown;
+
+  /**
+   * カスタムのタイムスタンプです。
+   */
+  timestamp?: v.InferInput<typeof schemas.Timestamp> | undefined;
 }>;
 
 /**
@@ -295,6 +300,7 @@ export type CreateWriteStreamOptions = Readonly<{
 const CreateWriteStreamOptionsSchema = v.object({
   flag: v.optional(schemas.OpenMode, "w"),
   mimeType: v.optional(schemas.MimeType),
+  timestamp: v.optional(schemas.Timestamp),
   objectTags: v.optional(schemas.ObjectTags),
   description: v.nullish(v.string()),
   userMetadata: v.optional(v.unknown()),
@@ -1527,6 +1533,7 @@ export default class Omnio {
   async #createWriteStream(
     args: Readonly<{
       mimeType: v.InferOutput<typeof schemas.MimeType>;
+      timestamp: v.InferOutput<typeof schemas.Timestamp> | undefined;
       objectPath: ObjectPath;
       objectTags: v.InferOutput<typeof schemas.ObjectTags> | undefined;
       description: string | null | undefined;
@@ -1535,6 +1542,7 @@ export default class Omnio {
   ): Promise<ObjectFileWriteStream> {
     const {
       mimeType,
+      timestamp,
       objectPath,
       objectTags,
       description,
@@ -1578,6 +1586,7 @@ export default class Omnio {
         new: newEntityId,
         old: oldEntityId,
       },
+      timestamp,
       bucketName: this.bucketName,
       objectPath,
       objectTags,
@@ -1590,6 +1599,7 @@ export default class Omnio {
   async #createAppendStream(
     args: Readonly<{
       mimeType: v.InferOutput<typeof schemas.MimeType>;
+      timestamp: v.InferOutput<typeof schemas.Timestamp> | undefined;
       objectPath: ObjectPath;
       objectTags: v.InferOutput<typeof schemas.ObjectTags> | undefined;
       description: string | null | undefined;
@@ -1598,6 +1608,7 @@ export default class Omnio {
   ): Promise<ObjectFileWriteStream> {
     const {
       mimeType,
+      timestamp,
       objectPath,
       objectTags,
       description,
@@ -1672,6 +1683,7 @@ export default class Omnio {
         new: newEntityId,
         old: oldEntityId,
       },
+      timestamp,
       bucketName: this.bucketName,
       objectPath,
       objectTags,
@@ -1685,6 +1697,7 @@ export default class Omnio {
     args: Readonly<{
       flag: Extract<OpenMode, `${string}x`> & v.Brand<"OpenMode">;
       mimeType: v.InferOutput<typeof schemas.MimeType>;
+      timestamp: v.InferOutput<typeof schemas.Timestamp> | undefined;
       objectPath: ObjectPath;
       objectTags: v.InferOutput<typeof schemas.ObjectTags> | undefined;
       description: string | null | undefined;
@@ -1694,6 +1707,7 @@ export default class Omnio {
     const {
       flag,
       mimeType,
+      timestamp,
       objectPath,
       objectTags,
       description,
@@ -1717,6 +1731,7 @@ export default class Omnio {
         new: newEntityId,
         old: undefined,
       },
+      timestamp,
       bucketName: this.bucketName,
       objectPath,
       objectTags,
@@ -1746,6 +1761,7 @@ export default class Omnio {
     const {
       flag,
       mimeType = getMimeType(objectPath.basename),
+      timestamp,
       objectTags,
       description,
       userMetadata,
@@ -1754,6 +1770,7 @@ export default class Omnio {
       case "w":
         return await this.#createWriteStream({
           mimeType,
+          timestamp,
           objectPath,
           objectTags,
           description,
@@ -1763,6 +1780,7 @@ export default class Omnio {
       case "a":
         return await this.#createAppendStream({
           mimeType,
+          timestamp,
           objectPath,
           objectTags,
           description,
@@ -1774,6 +1792,7 @@ export default class Omnio {
         return await this.#createExclusiveStream({
           flag,
           mimeType,
+          timestamp,
           objectPath,
           objectTags,
           description,

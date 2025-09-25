@@ -100,6 +100,13 @@ interface Metadata {
        * @default null
        */
       userMetadata: unknown;
+
+      /**
+       * カスタムのタイムスタンプです。
+       *
+       * @default Date.now()
+       */
+      timestamp: v.InferOutput<typeof schemas.Timestamp> | undefined;
     }>,
   ): Awaitable<void>;
 
@@ -165,6 +172,13 @@ interface Metadata {
        * @default null
        */
       userMetadata: unknown;
+
+      /**
+       * カスタムのタイムスタンプです。
+       *
+       * @default Date.now()
+       */
+      timestamp: v.InferOutput<typeof schemas.Timestamp> | undefined;
     }>,
   ): Awaitable<void>;
 
@@ -271,6 +285,13 @@ interface Metadata {
          */
         checksum: v.InferOutput<typeof schemas.Checksum>;
       }>;
+
+      /**
+       * カスタムのタイムスタンプです。
+       *
+       * @default Date.now()
+       */
+      timestamp: v.InferOutput<typeof schemas.Timestamp> | undefined;
     }>,
   ): Awaitable<void>;
 }
@@ -308,6 +329,11 @@ type ObjectFileWriteStreamInput = Readonly<{
    * オブジェクトのユーザー定義のメタデータです。
    */
   userMetadata: unknown | undefined;
+
+  /**
+   * カスタムのタイムスタンプです。
+   */
+  timestamp: v.InferOutput<typeof schemas.Timestamp> | undefined;
 
   /**
    * オブジェクトを開く際のモードです。
@@ -435,6 +461,11 @@ export type ObjectFileWriteStreamJson = {
    * 中断の理由です。
    */
   abortReason?: unknown;
+
+  /**
+   * カスタムのタイムスタンプです。
+   */
+  timestamp?: number;
 };
 
 /**
@@ -554,6 +585,11 @@ export default class ObjectFileWriteStream implements AsyncDisposable {
   public userMetadata: unknown | undefined;
 
   /**
+   * カスタムのタイムスタンプです。
+   */
+  public timestamp: v.InferInput<typeof schemas.Timestamp> | undefined;
+
+  /**
    * `ObjectFileWriteStream` を構築します。
    *
    * @param inp `ObjectFileWriteStream` を構築するための入力パラメーターです。
@@ -568,6 +604,7 @@ export default class ObjectFileWriteStream implements AsyncDisposable {
     this.#logger = inp.logger;
     this.#writer = inp.writer;
     this.#metadata = inp.metadata;
+    this.timestamp = inp.timestamp;
     this.#directory = inp.directory;
     this.#entityIds = inp.entityIds;
     this.bucketName = inp.bucketName;
@@ -686,6 +723,7 @@ export default class ObjectFileWriteStream implements AsyncDisposable {
     // メタデータを作成または更新します。
     const checksum = this.#hash.digest();
     const mimeType = v.parse(v.optional(schemas.MimeType), this.type);
+    const timestamp = v.parse(v.optional(schemas.Timestamp), this.timestamp);
     const objectTags = v.parse(v.optional(schemas.ObjectTags), this.objectTags);
     switch (this.flag) {
       case "w":
@@ -698,6 +736,7 @@ export default class ObjectFileWriteStream implements AsyncDisposable {
             checksum,
             entityId: this.#entityIds.new,
             mimeType,
+            timestamp,
             objectPath: this.objectPath,
             objectSize: this.size,
             objectTags,
@@ -745,6 +784,7 @@ export default class ObjectFileWriteStream implements AsyncDisposable {
               checksum,
               entityId: this.#entityIds.new,
               mimeType,
+              timestamp,
               objectPath: this.objectPath,
               objectSize: this.size,
               objectTags,
@@ -757,6 +797,7 @@ export default class ObjectFileWriteStream implements AsyncDisposable {
               checksum,
               entityId: this.#entityIds.new,
               mimeType,
+              timestamp,
               objectPath: this.objectPath,
               objectSize: this.size,
               objectTags,
@@ -801,6 +842,7 @@ export default class ObjectFileWriteStream implements AsyncDisposable {
             checksum,
             entityId: this.#entityIds.new,
             mimeType,
+            timestamp,
             objectPath: this.objectPath,
             objectSize: this.size,
             objectTags,
@@ -869,6 +911,9 @@ export default class ObjectFileWriteStream implements AsyncDisposable {
     }
     if (this.userMetadata !== undefined) {
       json.userMetadata = this.userMetadata;
+    }
+    if (this.timestamp !== undefined) {
+      json.timestamp = new Date(this.timestamp).getTime();
     }
     if ("abortReason" in this) {
       json.abortReason = this.abortReason;
