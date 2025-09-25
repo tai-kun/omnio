@@ -42,7 +42,7 @@ jobs:
         run: bun i
 
       - name: "ビルド"
-        run: npm run build
+        run: mise run build
 
       - name: "バージョンを更新"
         run: |

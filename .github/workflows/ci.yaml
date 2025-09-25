@@ -23,7 +23,7 @@ jobs:
           npx playwright install --with-deps
 
       - name: "テスト"
-        run: npm run test
+        run: mise run test
 
       - name: "ビルド"
-        run: npm run build
+        run: mise run build
