@@ -1,0 +1,31 @@
+[tools]
+node = "22"
+bun = "1"
+
+[tasks.test]
+depends = [
+    "test:client",
+    "test:server",
+    "test:typecheck",
+]
+
+[tasks."test:client"]
+run = "npx vitest --config .config/vitest.client.ts --run tests/"
+
+[tasks."test:server"]
+run = "npx vitest --config .config/vitest.server.ts --run tests/"
+
+[tasks."test:typecheck"]
+run = "npx tsc --noEmit"
+
+[tasks.update]
+run = [
+    "mise upgrade",
+    "npx npm-check-updates --target minor -u -x '@duckdb/duckdb-wasm' -x '@duckdb/node-api'",
+    "bun install",
+    "npx dprint config update",
+    "npx playwright install chromium --with-deps",
+]
+
+[tasks.build]
+run = "npx tsc -p .config/tsconfig.build.json"

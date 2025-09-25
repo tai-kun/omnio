@@ -28,10 +28,8 @@ jobs:
           git config --global user.name "github-actions"
           git config --global user.email "github-actions@github.com"
 
-      - name: "Node.js をセットアップ"
-        uses: volta-cli/action@5c175f92dea6f48441c436471e6479dbc192e194  # v4.2.1
-        with:
-          registry-url: "https://registry.npmjs.org"
+      - name: "mise をセットアップ"
+        uses: jdx/mise-action@5ac50f778e26fac95da98d50503682459e86d566  # v3.2.0
 
       - name: "バージョン確認"
         run: |
@@ -41,7 +39,7 @@ jobs:
           fi
 
       - name: "依存関係をインストール"
-        run: npm ci
+        run: bun i
 
       - name: "ビルド"
         run: npm run build

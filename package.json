@@ -49,20 +49,6 @@
   "repository": {
     "url": "https://github.com/tai-kun/omnio"
   },
-  "scripts": {
-    "update": "run-s update:*",
-    "update:nodejs": "volta pin node@lts",
-    "update:module": "ncu --target minor --reject '@duckdb/duckdb-wasm' -u",
-    "update:dprint": "dprint config update",
-    "update:install": "run-s update:install:*",
-    "update:install:packages": "npm install",
-    "update:install:playwright": "playwright install --with-deps",
-    "test": "run-s test:*",
-    "test:server": "vitest --config .config/vitest.server.ts --run tests/",
-    "test:client": "vitest --config .config/vitest.client.ts --run tests/",
-    "test:typecheck": "tsc --noEmit",
-    "build": "tsc -p .config/tsconfig.build.json"
-  },
   "dependencies": {
     "hash-wasm": "^4.12.0",
     "mime": "^4.1.0",
@@ -84,13 +70,9 @@
     "esbuild": "^0.25.10",
     "esbuild-plugin-replace": "^1.4.0",
     "npm-check-updates": "^18.3.0",
-    "npm-run-all2": "^8.0.4",
     "playwright": "^1.55.0",
     "superjson": "^2.2.2",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"
-  },
-  "volta": {
-    "node": "22.19.0"
   }
 }
