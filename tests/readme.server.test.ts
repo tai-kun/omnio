@@ -35,9 +35,8 @@ test("READEM.md", async ({ expect }) => {
     });
   }
   {
-    const dirPath = ["path"];
     const query = "商品";
-    const objectList = await omnio.searchObjects(dirPath, query, { recursive: true });
+    const objectList = await omnio.searchObjects(query, { recursive: true });
     const objects = await Array.fromAsync(objectList);
 
     // console.log(objects);

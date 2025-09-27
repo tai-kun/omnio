@@ -41,9 +41,8 @@ await omnio.putObject("path/to/movie.mp4", new Uint8Array(), {
   console.log(object.userMetadata);  //-> { src: "https://example.com/movie.mp4" }
 }
 {
-  const dirPath = ["path"];
   const query = "商品";
-  const objectList = await omnio.searchObjects(dirPath, query, { recursive: true });
+  const objectList = await omnio.searchObjects(query, { recursive: true });
   const objects = await Array.fromAsync(objectList);
 
   console.log(objects);

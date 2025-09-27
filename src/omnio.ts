@@ -711,17 +711,19 @@ export type ListQuery = Readonly<{
   /**
    * 対象を限定します。
    */
-  where: Readonly<{
-    /**
-     * ディレクトリーパスです。
-     */
-    dirPath: readonly string[];
+  where?:
+    | Readonly<{
+      /**
+       * ディレクトリーパスです。
+       */
+      dirPath?: readonly string[] | undefined;
 
-    /**
-     * `true` ならオブジェクトのみを、`false` ならディレクトリーのみをリストアップします。
-     */
-    isObject?: boolean | undefined;
-  }>;
+      /**
+       * `true` ならオブジェクトのみを、`false` ならディレクトリーのみをリストアップします。
+       */
+      isObject?: boolean | undefined;
+    }>
+    | undefined;
 
   /**
    * スキップするアイテムの数です。
@@ -797,10 +799,10 @@ const ListQuerySchemaBase = {
     userMetadata: v.optional(v.boolean()),
     entityId: v.optional(v.boolean()),
   })),
-  where: v.object({
-    dirPath: v.array(v.string()),
+  where: v.optional(v.object({
+    dirPath: v.optional(v.array(v.string())),
     isObject: v.optional(v.boolean()),
-  }),
+  })),
   skip: v.optional(schemas.UnsignedInteger),
   take: v.optional(schemas.UnsignedInteger),
 };
@@ -878,6 +880,18 @@ export type ListItem<TSelect, TIsObject> = undefined extends TIsObject
  */
 export type SearchObjectsOptions = Readonly<{
   /**
+   * 対象を限定します。
+   */
+  where?:
+    | Readonly<{
+      /**
+       * ディレクトリーパスです。
+       */
+      dirPath?: readonly string[] | undefined;
+    }>
+    | undefined;
+
+  /**
    * スキップする検索結果の数です。
    *
    * @default 0
@@ -910,6 +924,9 @@ export type SearchObjectsOptions = Readonly<{
  * オブジェクトの説明文を対象に全文検索するためのオプションです。
  */
 const SearchObjectsOptionsSchema = v.object({
+  where: v.optional(v.object({
+    dirPath: v.optional(v.array(v.string())),
+  })),
   skip: v.optional(schemas.UnsignedInteger),
   take: v.optional(schemas.UnsignedInteger),
   recursive: v.optional(v.boolean()),
@@ -2021,7 +2038,7 @@ export default class Omnio {
     const {
       skip,
       take,
-      where,
+      where = {},
       select,
       orderBy = {},
     } = v.parse(this.#ListQuerySchema!, query);
@@ -2029,7 +2046,7 @@ export default class Omnio {
       skip,
       take,
       where: {
-        dirPath: where.dirPath,
+        dirPath: where.dirPath || [],
         isObject: where.isObject,
       },
       select,
@@ -2048,14 +2065,12 @@ export default class Omnio {
   /**
    * オブジェクトの説明文を対象に全文検索します。
    *
-   * @param directoryPath ディレクトリーを表すパスセグメントの配列です。
    * @param query 検索クエリーです。
    * @param options オブジェクトの説明文を対象に全文検索するためのオプションです。
    * @returns オブジェクトの説明文を対象に全文検索した結果です。
    */
   @mutex.readonly
   public async searchObjects(
-    directoryPath: readonly string[],
     query: string,
     options: SearchObjectsOptions = {},
   ): Promise<List<SearchResult>> {
@@ -2063,10 +2078,10 @@ export default class Omnio {
       throw new Error("Omnio closed");
     }
 
-    const dirPath = directoryPath; // TODO: 入力値検証
     const {
       skip,
       take,
+      where = {},
       recursive,
       scoreThreshold,
     } = v.parse(SearchObjectsOptionsSchema, options);
@@ -2074,7 +2089,7 @@ export default class Omnio {
       skip,
       take,
       query: v.parse(v.string(), query),
-      dirPath,
+      dirPath: where.dirPath || [],
       recursive,
       scoreThreshold,
     });
