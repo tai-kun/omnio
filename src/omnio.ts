@@ -928,7 +928,7 @@ export type SearchResult = {
   /**
    * オブジェクトの説明文です。
    */
-  description: string;
+  description: string | null;
 
   /**
    * 検索スコアです。

@@ -745,13 +745,13 @@ describe("stat", () => {
 describe("search", () => {
   test("指定したディレクトリ直下の説明文を対象に全文検索できる", async ({ metadata, expect }) => {
     const DOCS = {
-      "path/file1.txt": "foo shallow",
-      "path/to/file1.txt": "foo foo foo bar baz",
-      "path/to/file2.txt": "foo foo bar bar",
-      "path/to/file3.txt": "foo",
-      "path/to/file4.txt": "qux",
-      "path/to/file5.txt": undefined,
-      "path/to/dir/file1.txt": "foo deep",
+      "i/x1.txt": "foo shallow",
+      "i/j/x1.txt": "foo foo foo bar baz",
+      "i/j/x2.txt": "foo foo bar bar",
+      "i/j/x3.txt": "foo",
+      "i/j/x4.txt": "qux",
+      "i/j/x5.txt": undefined,
+      "i/j/k/x1.txt": "foo deep",
     };
     for (const [path, description] of Object.entries(DOCS)) {
       await expect(metadata.createExclusive({
@@ -773,9 +773,9 @@ describe("search", () => {
         .toThrow();
     }
 
-    await expect(Array.fromAsync(
+    await expect.soft(Array.fromAsync(
       await metadata.search({
-        dirPath: ["path", "to"],
+        dirPath: ["i", "j"],
         query: "foo",
         take: undefined,
         skip: undefined,
@@ -787,23 +787,23 @@ describe("search", () => {
       .toStrictEqual([
         {
           objectPath: expect.any(ObjectPath),
-          description: "foo", // 完全一致
-          searchScore: expect.any(Number),
-        },
-        {
-          objectPath: expect.any(ObjectPath),
           description: "foo foo foo bar baz", // 一致回数が多い
           searchScore: expect.any(Number),
         },
         {
           objectPath: expect.any(ObjectPath),
-          description: "foo foo bar bar", // 一致回数が少ない
+          description: "foo foo bar bar",
+          searchScore: expect.any(Number),
+        },
+        {
+          objectPath: expect.any(ObjectPath),
+          description: "foo", // 一致回数が少ない
           searchScore: expect.any(Number),
         },
       ]);
-    await expect(Array.fromAsync(
+    await expect.soft(Array.fromAsync(
       await metadata.search({
-        dirPath: ["path", "to"],
+        dirPath: ["i", "j"],
         query: "foo",
         take: asUint(1),
         skip: undefined,
@@ -815,13 +815,13 @@ describe("search", () => {
       .toStrictEqual([
         {
           objectPath: expect.any(ObjectPath),
-          description: "foo", // 完全一致
+          description: "foo foo foo bar baz", // 一致回数が多い
           searchScore: expect.any(Number),
         },
       ]);
-    await expect(Array.fromAsync(
+    await expect.soft(Array.fromAsync(
       await metadata.search({
-        dirPath: ["path", "to"],
+        dirPath: ["i", "j"],
         query: "bar",
         take: undefined,
         skip: undefined,
@@ -842,9 +842,9 @@ describe("search", () => {
           searchScore: expect.any(Number),
         },
       ]);
-    await expect(Array.fromAsync(
+    await expect.soft(Array.fromAsync(
       await metadata.search({
-        dirPath: ["path"],
+        dirPath: ["i"],
         query: "foo",
         take: undefined,
         skip: undefined,
@@ -860,9 +860,9 @@ describe("search", () => {
           searchScore: expect.any(Number),
         },
       ]);
-    await expect(Array.fromAsync(
+    await expect.soft(Array.fromAsync(
       await metadata.search({
-        dirPath: ["path", "to", "dir"],
+        dirPath: ["i", "j", "k"],
         query: "foo",
         take: undefined,
         skip: undefined,
@@ -878,6 +878,52 @@ describe("search", () => {
           searchScore: expect.any(Number),
         },
       ]);
+  });
+
+  test("パスを対象に全文検索できる", async ({ metadata, expect }) => {
+    const DOCS = {
+      "path/to/ファイル.txt": null,
+      "path/to/説明書.txt": null,
+    };
+    for (const [path, description] of Object.entries(DOCS)) {
+      await expect(metadata.createExclusive({
+        checksum: {
+          value: asChecksum("00000000000000000000000000000000"),
+          state: asHashState([]),
+        },
+        entityId: getEntityId(),
+        mimeType: asMimeType("text/plain"),
+        timestamp: undefined,
+        objectPath: ObjectPath.parse(path),
+        objectSize: asUint(0),
+        objectTags: asObjectTags([]),
+        description,
+        userMetadata: null,
+      }))
+        .resolves
+        .not
+        .toThrow();
+    }
+
+    const list = JSON.parse(JSON.stringify(
+      await Array.fromAsync(
+        await metadata.search({
+          dirPath: [],
+          query: "ファイル",
+          take: undefined,
+          skip: undefined,
+          recursive: true,
+          scoreThreshold: undefined,
+        }),
+      ),
+    ));
+    expect(list).toStrictEqual([
+      {
+        objectPath: "path/to/ファイル.txt",
+        description: null,
+        searchScore: expect.any(Number),
+      },
+    ]);
   });
 
   test("日本語で全文検索できる", async ({ metadata, expect }) => {
@@ -1718,7 +1764,7 @@ describe("update", () => {
   });
 
   test("説明文を更新したあと検索に反映される", async ({ metadata, expect }) => {
-    const objectPath = ObjectPath.parse("path/to/file.txt");
+    const objectPath = ObjectPath.parse("i/j/k.txt");
 
     await expect(metadata.createExclusive({
       checksum: {
@@ -1739,7 +1785,7 @@ describe("update", () => {
       .toThrow();
     await expect(Array.fromAsync(
       await metadata.search({
-        dirPath: ["path", "to"],
+        dirPath: ["i", "j"],
         query: "old",
         take: undefined,
         skip: undefined,
@@ -1768,7 +1814,7 @@ describe("update", () => {
       .toThrow();
     await expect.soft(Array.fromAsync(
       await metadata.search({
-        dirPath: ["path", "to"],
+        dirPath: ["i", "j"],
         query: "old",
         take: undefined,
         skip: undefined,
@@ -1780,7 +1826,7 @@ describe("update", () => {
       .toStrictEqual([]);
     await expect.soft(Array.fromAsync(
       await metadata.search({
-        dirPath: ["path", "to"],
+        dirPath: ["i", "j"],
         query: "new",
         take: undefined,
         skip: undefined,

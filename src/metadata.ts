@@ -1054,7 +1054,7 @@ type SearchOutput = {
   /**
    * オブジェクトの説明文です。
    */
-  description: string;
+  description: string | null;
 
   /**
    * 検索スコアです。
@@ -2388,7 +2388,7 @@ export default class Metadata {
       // https://duckdb.org/docs/stable/core_extensions/full_text_search.html#pragma-create_fts_index
       await this.#exec(sql`
         PRAGMA create_fts_index(
-          metadata_v1, objectid, desc_fts,
+          metadata_v1, objectid, fullpath, desc_fts,
           stemmer       = 'none',
           stopwords     = 'none',
           ignore        = '',
@@ -2438,7 +2438,7 @@ export default class Metadata {
     const rows = await this.#query(join(stmt, ""));
     const schema = v.object({
       fullpath: v.string(),
-      description: v.string(),
+      description: v.nullable(v.string()),
       searchScore: v.pipe(v.number(), v.finite()),
     });
 
@@ -2452,7 +2452,7 @@ export default class Metadata {
 
         yield {
           objectPath: new ObjectPath(fullpath),
-          description: await ts.fromQueryString(description),
+          description: description === null ? null : await ts.fromQueryString(description),
           searchScore,
         };
       }
