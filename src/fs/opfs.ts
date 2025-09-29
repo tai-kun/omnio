@@ -442,6 +442,7 @@ export class Opfs implements Fs {
       throw new OpfsError(`The permission given to storage-access was "${state}"`);
     }
 
+    await window.navigator.storage.persist();
     this.#rootHandle = await window.navigator.storage.getDirectory();
     const segmentsStr = this.root.slice("opfs://".length, -"/".length);
     if (segmentsStr) {
