@@ -10,6 +10,9 @@
     "singleBodyPosition": "nextLine",
     "arrowFunction.useParentheses": "preferNone"
   },
+  "toml": {
+    "indentWidth": 4
+  },
   "plugins": [
     "https://plugins.dprint.dev/typescript-0.95.11.wasm",
     "https://plugins.dprint.dev/json-0.20.0.wasm",

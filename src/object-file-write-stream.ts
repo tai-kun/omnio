@@ -2,13 +2,14 @@ import * as v from "valibot";
 import type BucketName from "./bucket-name.js";
 import { Error } from "./errors.js";
 import type { DirectoryHandle, WritableFileStream } from "./fs/fs.types.js";
+import type { ConsoleLikeLogger } from "./logger/to-console-like-logger.js";
 import type { Hash } from "./md5.js";
+import type Metadata from "./metadata.js";
 import mutex from "./mutex.js";
 import ObjectIdent from "./object-ident.js";
 import type ObjectPath from "./object-path.js";
 import * as schemas from "./schemas.js";
 import toUint8Array, { type Uint8ArraySource } from "./to-uint8-array.js";
-import type { Awaitable } from "./type-utils.js";
 
 /**
  * `Omnio` のインターフェースです。
@@ -18,282 +19,6 @@ interface Omnio {
    * `Omnio` が閉じているかかどうかを示します。
    */
   readonly closed: boolean;
-}
-
-/**
- * ログを記録する関数群のインターフェースです。
- */
-interface Logger {
-  /**
-   * エラーメッセージを記録します。
-   *
-   * @param message エラーメッセージです。
-   * @param reason エラーの原因です。
-   */
-  error(message: string, reason: unknown): void;
-}
-
-/**
- * メタデータを管理するオブジェクトのインターフェースです。
- * `ObjectFileWriteStream` クラスが依存するメタデータシステムの抽象化を提供します。
- */
-interface Metadata {
-  /**
-   * オブジェクトのメタデータを作成します。
-   *
-   * @param inp オブジェクトのメタデータを作成するための入力パラメーターです。
-   */
-  create(
-    inp: Readonly<{
-      /**
-       * バケット内のオブジェクトパスです。
-       */
-      objectPath: ObjectPath;
-
-      /**
-       * 実際に保存されるオブジェクトの識別子です。
-       */
-      entityId: v.InferOutput<typeof schemas.EntityId>;
-
-      /**
-       * オブジェクトのチェックサム (MD5 ハッシュ値) です。
-       */
-      checksum: Readonly<{
-        /**
-         * 計算されたハッシュ値の 16 進数文字列です。
-         */
-        value: v.InferOutput<typeof schemas.Checksum>;
-
-        /**
-         * ハッシュ関数の内部状態です。
-         */
-        state: v.InferOutput<typeof schemas.HashState>;
-      }>;
-
-      /**
-       * オブジェクトのデータ形式です。`undefined` の場合はオブジェクトパスから自動判定されます。
-       */
-      mimeType: v.InferOutput<typeof schemas.MimeType> | undefined;
-
-      /**
-       * オブジェクトのサイズ (バイト数) です。
-       */
-      objectSize: v.InferOutput<typeof schemas.UnsignedInteger>;
-
-      /**
-       * オブジェクトに関連付けられたオブジェクトタグです。
-       *
-       * @default []
-       */
-      objectTags: v.InferOutput<typeof schemas.ObjectTags> | undefined;
-
-      /**
-       * オブジェクトの説明文です。
-       *
-       * @default null
-       */
-      description: string | null | undefined;
-
-      /**
-       * ユーザー定義のメタデータです。
-       *
-       * @default null
-       */
-      userMetadata: unknown;
-
-      /**
-       * カスタムのタイムスタンプです。
-       *
-       * @default Date.now()
-       */
-      timestamp: v.InferOutput<typeof schemas.Timestamp> | undefined;
-    }>,
-  ): Awaitable<void>;
-
-  /**
-   * オブジェクトのメタデータを排他的に作成します。
-   *
-   * @param inp オブジェクトのメタデータを排他的に作成するための入力パラメーターです。
-   */
-  createExclusive(
-    inp: Readonly<{
-      /**
-       * バケット内のオブジェクトパスです。
-       */
-      objectPath: ObjectPath;
-
-      /**
-       * 実際に保存されるオブジェクトの識別子です。
-       */
-      entityId: v.InferOutput<typeof schemas.EntityId>;
-
-      /**
-       * オブジェクトのチェックサム (MD5 ハッシュ値) です。
-       */
-      checksum: Readonly<{
-        /**
-         * 計算されたハッシュ値の 16 進数文字列です。
-         */
-        value: v.InferOutput<typeof schemas.Checksum>;
-
-        /**
-         * ハッシュ関数の内部状態です。
-         */
-        state: v.InferOutput<typeof schemas.HashState>;
-      }>;
-
-      /**
-       * オブジェクトのデータ形式です。`undefined` の場合はオブジェクトパスから自動判定されます。
-       */
-      mimeType: v.InferOutput<typeof schemas.MimeType> | undefined;
-
-      /**
-       * オブジェクトのサイズ (バイト数) です。
-       */
-      objectSize: v.InferOutput<typeof schemas.UnsignedInteger>;
-
-      /**
-       * オブジェクトに関連付けられたオブジェクトタグです。
-       *
-       * @default []
-       */
-      objectTags: v.InferOutput<typeof schemas.ObjectTags> | undefined;
-
-      /**
-       * オブジェクトの説明文です。
-       *
-       * @default null
-       */
-      description: string | null | undefined;
-
-      /**
-       * ユーザー定義のメタデータです。
-       *
-       * @default null
-       */
-      userMetadata: unknown;
-
-      /**
-       * カスタムのタイムスタンプです。
-       *
-       * @default Date.now()
-       */
-      timestamp: v.InferOutput<typeof schemas.Timestamp> | undefined;
-    }>,
-  ): Awaitable<void>;
-
-  /**
-   * 存在するオブジェクトのメタデータを取得します。
-   *
-   * @param inp オブジェクトのメタデータを取得するための入力パラメーターです。
-   * @returns オブジェクトのメタデータを取得した結果です。
-   */
-  read(
-    inp: Readonly<{
-      /**
-       * 結果に含めるカラムを選択します。
-       */
-      select: Readonly<{
-        /**
-         * 実際に保存されるオブジェクトの識別子です。
-         */
-        entityId: true;
-      }>;
-
-      /**
-       * 対象を限定します。
-       */
-      where: Readonly<{
-        /**
-         * バケット内のオブジェクトパスです。
-         */
-        objectPath: ObjectPath;
-      }>;
-    }>,
-  ): Awaitable<
-    Readonly<{
-      /**
-       * 実際に保存されるオブジェクトの識別子です。
-       */
-      entityId: v.InferOutput<typeof schemas.EntityId>;
-    }>
-  >;
-
-  /**
-   * オブジェクトのメタデータを排他的に更新します。
-   *
-   * @param inp オブジェクトのメタデータを排他的に更新するための入力パラメーターです。
-   */
-  updateExclusive(
-    inp: Readonly<{
-      /**
-       * バケット内のオブジェクトパスです。
-       */
-      objectPath: ObjectPath;
-
-      /**
-       * 実際に保存されるオブジェクトの識別子です。
-       */
-      entityId: v.InferOutput<typeof schemas.EntityId> | undefined;
-
-      /**
-       * オブジェクトのチェックサム (MD5 ハッシュ値) です。
-       */
-      checksum: Readonly<{
-        /**
-         * 計算されたハッシュ値の 16 進数文字列です。
-         */
-        value: v.InferOutput<typeof schemas.Checksum>;
-
-        /**
-         * ハッシュ関数の内部状態です。
-         */
-        state: v.InferOutput<typeof schemas.HashState>;
-      }>;
-
-      /**
-       * オブジェクトのデータ形式です。
-       */
-      mimeType: v.InferOutput<typeof schemas.MimeType> | undefined;
-
-      /**
-       * オブジェクトのサイズ (バイト数) です。
-       */
-      objectSize: v.InferOutput<typeof schemas.UnsignedInteger>;
-
-      /**
-       * オブジェクトに関連付けられたオブジェクトタグです。
-       */
-      objectTags: v.InferOutput<typeof schemas.ObjectTags> | undefined;
-
-      /**
-       * オブジェクトの説明文です。
-       */
-      description: string | null | undefined;
-
-      /**
-       * ユーザー定義のメタデータです。
-       */
-      userMetadata: unknown | undefined;
-
-      /**
-       * 既存のメタデータに期待する値です。
-       */
-      expect: Readonly<{
-        /**
-         * 既存のチェックサムに期待する値です。
-         */
-        checksum: v.InferOutput<typeof schemas.Checksum>;
-      }>;
-
-      /**
-       * カスタムのタイムスタンプです。
-       *
-       * @default Date.now()
-       */
-      timestamp: v.InferOutput<typeof schemas.Timestamp> | undefined;
-    }>,
-  ): Awaitable<void>;
 }
 
 /**
@@ -348,7 +73,7 @@ type ObjectFileWriteStreamInput = Readonly<{
   /**
    * ログを記録する関数群です。
    */
-  logger: Logger;
+  logger: ConsoleLikeLogger;
 
   /**
    * メタデータを管理するオブジェクトです。
@@ -480,7 +205,7 @@ export default class ObjectFileWriteStream implements AsyncDisposable {
   /**
    * ログを記録する関数群です。
    */
-  readonly #logger: Logger;
+  readonly #logger: ConsoleLikeLogger;
 
   /**
    * メタデータを管理するオブジェクトです。

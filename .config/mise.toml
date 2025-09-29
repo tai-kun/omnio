@@ -25,6 +25,7 @@ run = [
     "bun install",
     "npx dprint config update",
     "npx playwright install chromium --with-deps",
+    "bun audit",
 ]
 
 [tasks.build]
