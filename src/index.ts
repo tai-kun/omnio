@@ -1,3 +1,6 @@
+export type * from "./db/db.types.js";
+export type * from "./fs/fs.types.js";
+
 export { default as BucketName } from "./bucket-name.js";
 export type * from "./bucket-name.js";
 

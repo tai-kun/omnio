@@ -22,34 +22,31 @@ test("READEM.md", async ({ expect }) => {
     },
   });
 
-  {
-    const object = await omnio.getObject("path/to/movie.mp4", {
-      load: {
-        userMetadata: true,
-      },
-    });
+  const object = await omnio.getObject("path/to/movie.mp4", {
+    load: {
+      userMetadata: true,
+    },
+  });
 
-    expect(object instanceof File).toBe(true);
-    expect(object.userMetadata).toStrictEqual({
-      src: "https://example.com/movie.mp4",
-    });
-  }
-  {
-    const query = "商品";
-    const objectList = await omnio.searchObjects(query, { recursive: true });
-    const objects = await Array.fromAsync(objectList);
+  expect(object instanceof File).toBe(true);
+  expect(object.userMetadata).toStrictEqual({
+    src: "https://example.com/movie.mp4",
+  });
 
-    // console.log(objects);
-    expect(jsonify(objects)).toStrictEqual([
-      {
-        objectPath: "path/to/movie.mp4",
-        description:
-          "この動画では、新商品「○○」の紹介が行われている。冒頭では商品の外観や付属品が映し出され、"
-          + "その後、主要な機能や特徴について説明が加えられている。",
-        searchScore: expect.any(Number),
-      },
-    ]);
-  }
+  const query = "商品";
+  const objectList = await omnio.searchObjects(query, { recursive: true });
+  const objects = await Array.fromAsync(objectList);
+
+  // console.log(objects);
+  expect(jsonify(objects)).toStrictEqual([
+    {
+      objectPath: "path/to/movie.mp4",
+      description:
+        "この動画では、新商品「○○」の紹介が行われている。冒頭では商品の外観や付属品が映し出され、"
+        + "その後、主要な機能や特徴について説明が加えられている。",
+      searchScore: expect.any(Number),
+    },
+  ]);
 
   await omnio.close();
 });
