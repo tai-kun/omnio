@@ -27,7 +27,7 @@ run = "npx tsc --noEmit"
 [tasks.update]
 run = [
     "mise upgrade",
-    "npx npm-check-updates --target minor -u -x '@duckdb/duckdb-wasm' -x '@duckdb/node-api'",
+    "npx npm-check-updates --target minor -u -x '@duckdb/duckdb-wasm' -x '@duckdb/node-api' --cooldown 7",
     "bun install",
     "npx dprint config update",
     "npx playwright install chromium --with-deps",

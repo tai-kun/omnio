@@ -18,7 +18,7 @@
         "dprint": "^0.50.2",
         "esbuild": "^0.25.10",
         "esbuild-plugin-replace": "^1.4.0",
-        "npm-check-updates": "^18.3.0",
+        "npm-check-updates": "^19.0.0",
         "playwright": "^1.55.1",
         "superjson": "^2.2.2",
         "typescript": "^5.9.2",
@@ -319,7 +319,7 @@
 
     "normalize-url": ["normalize-url@8.1.0", "", {}, "sha512-X06Mfd/5aKsRHc0O0J5CUedwnPmnDtLF2+nq+KN9KSDlJHkPuh0JUviWjEWMe0SW/9TDdSLVPuk7L5gGTIA1/w=="],
 
-    "npm-check-updates": ["npm-check-updates@18.3.0", "", { "bin": { "npm-check-updates": "build/cli.js", "ncu": "build/cli.js" } }, "sha512-Wcm90Af5JuzxwPTtdLl0OH2O1TCeqPTYBch1M3bePmfqylRMiFXXh+uglE4sfMjwdTjw7aIReMwudXeqoYvh2Q=="],
+    "npm-check-updates": ["npm-check-updates@19.0.0", "", { "bin": { "npm-check-updates": "build/cli.js", "ncu": "build/cli.js" } }, "sha512-qcfjZEv6xB+WvW24S8wU1MKISPPiTREraBg62XDo/7zmOLXH3Zj7ti2v/LRfks0qITU8SDZLTWwgIitflvursw=="],
 
     "pathe": ["pathe@2.0.3", "", {}, "sha512-WUjGcAqP1gQacoQe+OBJsFA7Ld4DyXuUIjZ5cc75cLHvJ7dtNsTugphxIADwspS+AraAUePCKrSVtPLFj/F88w=="],
 
