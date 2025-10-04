@@ -1,7 +1,6 @@
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
-import { beforeEach } from "node:test";
-import { afterAll, beforeAll, describe, test } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, test } from "vitest";
 import { NodeFsError } from "../../src/errors.js";
 import {
   NodeFs,

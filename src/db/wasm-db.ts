@@ -115,7 +115,7 @@ export class WasmDb implements Db {
   /**
    * DuckDB インスタンスと接続のプライベートプロパティーです。
    */
-  #duckdb: { ins: AsyncDuckDB; con: AsyncDuckDBConnection } | null;
+  #duckdb: Readonly<{ ins: AsyncDuckDB; con: AsyncDuckDBConnection }> | null;
 
   /**
    * 読み込み済みの DuckDB バンドルのプライベートプロパティーです。

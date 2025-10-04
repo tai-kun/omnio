@@ -10,6 +10,7 @@ export default defineConfig({
       .toString(),
     __CLIENT__: "false",
     __SERVER__: "true",
+    __MEMORY__: `${process.env["MEMORY_FS"] === "1"}`,
   },
   test: {
     include: [

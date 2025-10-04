@@ -1,9 +1,7 @@
-import * as buffer from "node:buffer";
-import * as fs from "node:fs";
-import * as fsp from "node:fs/promises";
-import * as path from "node:path";
+import { type IFs, memfs } from "memfs";
+import normUrl, { type Options as NormUrlOptions } from "normalize-url";
 import * as v from "valibot";
-import { FsPathNotFoundError, NodeFsError, TypeError } from "../errors.js";
+import { FsPathNotFoundError, MemoryFsError, TypeError } from "../errors.js";
 import isUint8Array from "../is-uint8-array.js";
 import mutex from "../mutex.js";
 import * as schemas from "../schemas.js";
@@ -20,6 +18,8 @@ import type {
 } from "./fs.types.js";
 
 export type * from "./fs.types.js";
+
+type IFileHandle = Awaited<ReturnType<IFs["promises"]["open"]>>;
 
 /**
  * 例外が ENOENT エラーかどうかを判定します。
@@ -38,11 +38,12 @@ function isEnoentError(ex: unknown): boolean {
 /**
  * ファイルパスが存在するか検証します。
  *
+ * @param fs ファイルシステムです。
  * @param path ファイルパスです。
  */
-async function assertFileExists(path: string): Promise<void> {
+async function assertFileExists(fs: IFs, path: string): Promise<void> {
   try {
-    const stats = await fsp.stat(path);
+    const stats = await fs.promises.stat(path);
     if (!stats.isFile()) {
       throw new FsPathNotFoundError(path);
     }
@@ -58,11 +59,12 @@ async function assertFileExists(path: string): Promise<void> {
 /**
  * ディレクトリーパスが存在するか検証します。
  *
+ * @param fs ファイルシステムです。
  * @param path ディレクトリーパスです。
  */
-async function assertDirectoryExists(path: string): Promise<void> {
+async function assertDirectoryExists(fs: IFs, path: string): Promise<void> {
   try {
-    const stats = await fsp.stat(path);
+    const stats = await fs.promises.stat(path);
     if (!stats.isDirectory()) {
       throw new FsPathNotFoundError(path);
     }
@@ -76,9 +78,9 @@ async function assertDirectoryExists(path: string): Promise<void> {
 }
 
 /**
- * ファイルストリームへの書き込みを行うクラスです。Node.js のファイルシステムを使用します。
+ * ファイルストリームへの書き込みを行うクラスです。
  */
-export class NodeFsWritableFileStream implements WritableFileStream {
+export class MemoryFsWritableFileStream implements WritableFileStream {
   /**
    * 書き込み先のファイルパスです。
    */
@@ -92,7 +94,12 @@ export class NodeFsWritableFileStream implements WritableFileStream {
   /**
    * 書き込みが完了するまでの一時的なファイルハンドルです。
    */
-  readonly #fileHandle: fsp.FileHandle;
+  readonly #fileHandle: IFileHandle;
+
+  /**
+   * ファイルシステムです。
+   */
+  readonly #fs: IFs;
 
   /**
    * 書き込み中の状態を管理するフラグです。
@@ -110,20 +117,23 @@ export class NodeFsWritableFileStream implements WritableFileStream {
   #bytesWritten: v.InferOutput<typeof schemas.UnsignedInteger>;
 
   /**
-   * `NodeFsWritableFileStream` の新しいインスタンスを構築します。
+   * `MemoryFsWritableFileStream` の新しいインスタンスを構築します。
    *
    * @param targetPath 書き込み先のファイルパスです。
    * @param crswapPath 書き込みが完了するまでの一時的なファイルパスです。
-   * @param fileHandle 書き込みが完了するまでの一時的なファイルの書き込みに使用する `fsp.FileHandle` オブジェクトです。
+   * @param fileHandle 書き込みが完了するまでの一時的なファイルの書き込みに使用する `IFileHandle` オブジェクトです。
+   * @param fs ファイルシステムです。
    */
   public constructor(
     targetPath: string,
     crswapPath: string,
-    fileHandle: fsp.FileHandle,
+    fileHandle: IFileHandle,
+    fs: IFs,
   ) {
     this.#targetPath = targetPath;
     this.#crswapPath = crswapPath;
     this.#fileHandle = fileHandle;
+    this.#fs = fs;
     this.#closed = false;
     this.#bytesWritten = 0 as v.InferOutput<typeof schemas.UnsignedInteger>;
   }
@@ -155,8 +165,8 @@ export class NodeFsWritableFileStream implements WritableFileStream {
         break;
       }
 
-      case data instanceof NodeFsFileHandle: {
-        const reader = fs.createReadStream(data.filePath, { highWaterMark: 4096 });
+      case data instanceof MemoryFsFileHandle: {
+        const reader = this.#fs.createReadStream(data.filePath, { highWaterMark: 4096 });
         const writer = this.#fileHandle;
         try {
           for await (const chunk of reader) {
@@ -170,7 +180,7 @@ export class NodeFsWritableFileStream implements WritableFileStream {
           }
         } finally {
           try {
-            reader.close();
+            reader.destroy();
           } catch {
             // 無視します。
           }
@@ -202,7 +212,7 @@ export class NodeFsWritableFileStream implements WritableFileStream {
       this.#abortReason = reason;
 
       try {
-        await fsp.unlink(this.#crswapPath);
+        await this.#fs.promises.unlink(this.#crswapPath);
       } catch {
         // 無視します。
       }
@@ -221,17 +231,17 @@ export class NodeFsWritableFileStream implements WritableFileStream {
     try {
       await this.#fileHandle.close();
       try {
-        await fsp.unlink(this.#targetPath);
+        await this.#fs.promises.unlink(this.#targetPath);
       } catch {
         // 無視します。
       }
 
-      await fsp.rename(this.#crswapPath, this.#targetPath);
+      await this.#fs.promises.rename(this.#crswapPath, this.#targetPath);
     } finally {
       this.#closed = true;
 
       try {
-        await fsp.unlink(this.#crswapPath);
+        await this.#fs.promises.unlink(this.#crswapPath);
       } catch {
         // 無視します。
       }
@@ -242,38 +252,51 @@ export class NodeFsWritableFileStream implements WritableFileStream {
 /**
  * ファイルのハンドル（操作を可能にする参照）を行うクラスです。ファイルへのアクセスや、書き込み可能なストリームの作成を可能にします。
  */
-export class NodeFsFileHandle implements FileHandle {
+export class MemoryFsFileHandle implements FileHandle {
   /**
    * ファイルの絶対パスです。
    */
   public readonly filePath: string;
 
   /**
-   * `NodeFsFileHandle` の新しいインスタンスを構築します。
+   * ファイル名です。
+   */
+  readonly #name: string;
+
+  /**
+   * ファイルシステムです。
+   */
+  readonly #fs: IFs;
+
+  /**
+   * `MemoryFsFileHandle` の新しいインスタンスを構築します。
    *
    * @param filePath ファイルの絶対パスです。
+   * @param name ファイル名です。
+   * @param fs ファイルシステムです。
    */
-  public constructor(filePath: string) {
+  public constructor(filePath: string, name: string, fs: IFs) {
     this.filePath = filePath;
+    this.#name = name;
+    this.#fs = fs;
   }
 
   /**
    * ファイルの内容を取得します。
    *
-   * @returns Node.js の `buffer.File` オブジェクトです。
+   * @returns `File` オブジェクトです。
    */
   @mutex
   public async getFile(): Promise<File> {
-    const stat = await fsp.stat(this.filePath);
+    const stat = await this.#fs.promises.stat(this.filePath);
     const lastMod = stat.mtime.getTime();
-    const content = await fsp.readFile(this.filePath);
+    const content = await this.#fs.promises.readFile(this.filePath);
     // ブラウザーの `File` API をエミュレートする簡潔な実装です。
-    // `File` クラスはブラウザー環境に固有のため、ここでは Node.js の buffer.File を使用しています。
-    const nodeFile = new buffer.File([content], path.basename(this.filePath), {
+    const file = new File([content as any], this.#name, {
       lastModified: lastMod,
     });
 
-    return nodeFile as File;
+    return file;
   }
 
   /**
@@ -282,31 +305,38 @@ export class NodeFsFileHandle implements FileHandle {
    * @returns ファイルストリームへの書き込みを行うクラスのインスタンスです。
    */
   @mutex
-  public async createWritable(): Promise<NodeFsWritableFileStream> {
+  public async createWritable(): Promise<MemoryFsWritableFileStream> {
     const targetPath = this.filePath;
     const crswapPath = this.filePath + ".crswap";
-    const fileHandle = await fsp.open(crswapPath, "w");
+    const fileHandle = await this.#fs.promises.open(crswapPath, "w");
 
-    return new NodeFsWritableFileStream(targetPath, crswapPath, fileHandle);
+    return new MemoryFsWritableFileStream(targetPath, crswapPath, fileHandle, this.#fs);
   }
 }
 
 /**
  * ディレクトリーのハンドル（操作を可能にする参照）を行うクラスです。ファイルやサブディレクトリーへのアクセスを可能にします。
  */
-export class NodeFsDirectoryHandle implements DirectoryHandle {
+export class MemoryFsDirectoryHandle implements DirectoryHandle {
   /**
    * ディレクトリーの絶対パスです。
    */
   readonly #dirPath: string;
 
   /**
-   * `NodeFsDirectoryHandle` の新しいインスタンスを構築します。
+   * ファイルシステムです。
+   */
+  readonly #fs: IFs;
+
+  /**
+   * `MemoryFsDirectoryHandle` の新しいインスタンスを構築します。
    *
    * @param dirPath ディレクトリーの絶対パスです。
+   * @param fs ファイルシステムです。
    */
-  public constructor(dirPath: string) {
+  public constructor(dirPath: string, fs: IFs) {
     this.#dirPath = dirPath;
+    this.#fs = fs;
   }
 
   /**
@@ -317,13 +347,13 @@ export class NodeFsDirectoryHandle implements DirectoryHandle {
    */
   @mutex
   public async removeEntry(name: string, options: RemoveOptions): Promise<void> {
-    const entryPath = path.join(this.#dirPath, name);
+    const entryPath = this.#dirPath + "/" + name;
     const { recursive } = options;
 
     let isFile: boolean;
     let isDirectory: boolean;
     try {
-      const stats = await fsp.stat(entryPath);
+      const stats = await this.#fs.promises.stat(entryPath);
       isFile = stats.isFile();
       isDirectory = stats.isDirectory();
     } catch (ex) {
@@ -336,11 +366,11 @@ export class NodeFsDirectoryHandle implements DirectoryHandle {
 
     switch (true) {
       case isFile:
-        await fsp.unlink(entryPath);
+        await this.#fs.promises.unlink(entryPath);
         break;
 
       case isDirectory:
-        await fsp.rm(entryPath, { recursive });
+        await this.#fs.promises.rm(entryPath, { recursive });
         break;
 
       default:
@@ -356,15 +386,15 @@ export class NodeFsDirectoryHandle implements DirectoryHandle {
    * @returns ファイルのハンドル（操作を可能にする参照）を行うクラスのインスタンスです。
    */
   @mutex
-  public async getFileHandle(name: string, options: GetFileOptions): Promise<NodeFsFileHandle> {
-    const filePath = path.join(this.#dirPath, name);
+  public async getFileHandle(name: string, options: GetFileOptions): Promise<MemoryFsFileHandle> {
+    const filePath = this.#dirPath + "/" + name;
     if (options.create) {
-      await fsp.writeFile(filePath, "");
+      await this.#fs.promises.writeFile(filePath, "");
     } else {
-      await assertFileExists(filePath);
+      await assertFileExists(this.#fs, filePath);
     }
 
-    return new NodeFsFileHandle(filePath);
+    return new MemoryFsFileHandle(filePath, name, this.#fs);
   }
 
   /**
@@ -378,31 +408,31 @@ export class NodeFsDirectoryHandle implements DirectoryHandle {
   public async getDirectoryHandle(
     name: string,
     options: GetDirectoryOptions,
-  ): Promise<NodeFsDirectoryHandle> {
-    const dirPath = path.join(this.#dirPath, name);
+  ): Promise<MemoryFsDirectoryHandle> {
+    const dirPath = this.#dirPath + "/" + name;
     if (options.create) {
-      await fsp.mkdir(dirPath, {
+      await this.#fs.promises.mkdir(dirPath, {
         recursive: true, // すでに作成済みのときエラーを投げないために再帰的な作成を許可します。
       });
     } else {
-      await assertDirectoryExists(dirPath);
+      await assertDirectoryExists(this.#fs, dirPath);
     }
 
-    return new NodeFsDirectoryHandle(dirPath);
+    return new MemoryFsDirectoryHandle(dirPath, this.#fs);
   }
 }
 
 /**
  * ファイルパスを編集するためのユーティリティーです。
  */
-export class NodeFsPath implements Path {
+export class MemoryFsPath implements Path {
   /**
    * ファイルシステム操作のルートディレクトリーです。必ずセパレーターで終わります。
    */
   readonly #root: string;
 
   /**
-   * `NodeFsPath` の新しいインスタンスを構築します。
+   * `MemoryFsPath` の新しいインスタンスを構築します。
    *
    * @param root ファイルシステム操作のルートディレクトリーです。
    */
@@ -417,17 +447,37 @@ export class NodeFsPath implements Path {
    * @returns 絶対パスに解決されたパスです。
    */
   public resolve(...paths: string[]): string {
-    let resolved = path.resolve(this.#root, paths.join(path.sep));
-    if (resolved.endsWith(path.sep)) {
-      resolved = resolved.slice(0, -path.sep.length);
+    const options: Required<NormUrlOptions> = {
+      stripWWW: true,
+      forceHttp: false,
+      stripHash: false,
+      forceHttps: false,
+      removePath: false,
+      stripProtocol: true,
+      transformPath: x => x,
+      defaultProtocol: "http",
+      normalizeProtocol: false,
+      stripTextFragment: false,
+      removeSingleSlash: true,
+      removeExplicitPort: false,
+      stripAuthentication: true,
+      keepQueryParameters: [/.+/],
+      removeTrailingSlash: true,
+      sortQueryParameters: true,
+      removeDirectoryIndex: false,
+      removeQueryParameters: false,
+    };
+    let resolved = normUrl("example.com/" + paths.join("/"), options)
+      .slice("example.com".length);
+
+    if (resolved[0] === "/") {
+      resolved = resolved.slice("/".length);
     }
-    if (resolved + path.sep === this.#root) {
+
+    resolved = this.#root + resolved;
+
+    if (resolved + "/" === this.#root) {
       return this.#root;
-    }
-    if (!resolved.startsWith(this.#root)) {
-      throw new NodeFsError(
-        `Cannot resolve path: Not starts with root (${this.#root}): ${resolved}`,
-      );
     }
 
     return resolved;
@@ -438,7 +488,7 @@ export class NodeFsPath implements Path {
  * ファイルシステムを操作するための基本的な機能を提供するクラスです。
  * ファイルシステムの接続、切断、およびディレクトリーへのアクセスを可能にします。
  */
-export class NodeFs implements Fs {
+export class MemoryFs implements Fs {
   /**
    * ファイルシステム操作のルートディレクトリーです。必ずセパレーターで終わります。
    */
@@ -447,7 +497,12 @@ export class NodeFs implements Fs {
   /**
    * ファイルパスを編集するためのユーティリティーです。
    */
-  readonly path: NodeFsPath;
+  readonly path: MemoryFsPath;
+
+  /**
+   * ファイルシステムです。
+   */
+  readonly fs: IFs;
 
   /**
    * 接続が閉じているか管理するフラグです。
@@ -455,18 +510,12 @@ export class NodeFs implements Fs {
   #closed: boolean;
 
   /**
-   * `NodeFs` の新しいインスタンスを構築します。
-   *
-   * @param rootDir 操作の基準となるルートディレクトリーのパスです。デフォルトは現在のディレクトリです。
+   * `MemoryFs` の新しいインスタンスを構築します。
    */
-  public constructor(rootDir: string | undefined = "") {
-    let root = path.resolve(rootDir);
-    if (!root.endsWith(path.sep)) {
-      root += path.sep;
-    }
-
-    this.root = root;
-    this.path = new NodeFsPath(this.root);
+  public constructor() {
+    this.root = "memory://";
+    this.path = new MemoryFsPath(this.root);
+    this.fs = memfs().fs;
     this.#closed = true;
   }
 
@@ -475,11 +524,6 @@ export class NodeFs implements Fs {
    */
   @mutex
   public async open(): Promise<void> {
-    if (!this.#closed) {
-      return;
-    }
-
-    await fsp.mkdir(this.root, { recursive: true });
     this.#closed = false;
   }
 
@@ -502,18 +546,20 @@ export class NodeFs implements Fs {
   public async getDirectoryHandle(
     name: string,
     options: GetDirectoryOptions,
-  ): Promise<NodeFsDirectoryHandle> {
+  ): Promise<MemoryFsDirectoryHandle> {
     if (this.#closed) {
-      throw new NodeFsError("Not open");
+      throw new MemoryFsError("Not open");
     }
 
-    const dirPath = path.join(this.root, name);
+    const dirPath = this.root + "/" + name;
     if (options.create) {
-      await fsp.mkdir(dirPath, { recursive: true });
+      await this.fs.promises.mkdir(dirPath, {
+        recursive: true, // すでに作成済みのときエラーを投げないために再帰的な作成を許可します。
+      });
     } else {
-      await assertDirectoryExists(dirPath);
+      await assertDirectoryExists(this.fs, dirPath);
     }
 
-    return new NodeFsDirectoryHandle(dirPath);
+    return new MemoryFsDirectoryHandle(dirPath, this.fs);
   }
 }

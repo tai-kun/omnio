@@ -1,8 +1,5 @@
 {
   "editor.rulers": [100],
-  "editor.codeActionsOnSave": {
-    "source.fixAll.stylelint": "explicit"
-  },
 
   "dprint.path": "node_modules/dprint/dprint",
 

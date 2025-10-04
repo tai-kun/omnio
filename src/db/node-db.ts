@@ -164,6 +164,10 @@ export class NodeDb implements Db {
    * @param path データベースファイルのパスです。
    */
   public async open(path: string): Promise<void> {
+    if (path.startsWith("memory://")) {
+      path = ":memory:";
+    }
+
     const ins = await DuckDBInstance.create(path, this.#options);
     const con = await ins.connect();
     this.#duckdb = {

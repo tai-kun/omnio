@@ -18,7 +18,7 @@ const test = vitest.extend<{
   omnio: Omnio;
 }>({
   async omnio({ task }, use) {
-    if (typeof document !== "undefined") {
+    if (__CLIENT__) {
       // https://duckdb.org/docs/stable/clients/wasm/instantiation#vite
       const duckdbBundle = await duckdb.selectBundle({
         mvp: {
@@ -52,6 +52,7 @@ const test = vitest.extend<{
       const path = await import("node:path");
       const { NodeDb } = await import("../src/db/node-db.js");
       const { NodeFs } = await import("../src/fs/node-fs.js");
+      const { MemoryFs } = await import("../src/fs/memory-fs.js");
       const testDir = path.join(
         "tests",
         ".temp",
@@ -61,7 +62,9 @@ const test = vitest.extend<{
       );
       const omnio = new Omnio({
         db: new NodeDb(),
-        fs: new NodeFs(testDir),
+        fs: __MEMORY__
+          ? new MemoryFs()
+          : new NodeFs(testDir),
         logger: __DEBUG__
           ? new omnioLogger.ConsoleLogger()
           : new omnioLogger.VoidLogger(),

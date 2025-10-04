@@ -201,6 +201,18 @@ export class FsError extends Error {
 }
 
 /**
+ * メモリー上に構築されたファイルシステムに関するエラーです。
+ */
+export class MemoryFsError extends FsError {
+  /**
+   * クラスの静的初期化ブロックです。プロトタイプの `name` プロパティーを "OmnioMemoryFsError" に設定します。
+   */
+  static {
+    this.prototype.name = "OmnioMemoryFsError";
+  }
+}
+
+/**
  * Node.js のファイルシステムに関するエラーです。
  */
 export class NodeFsError extends FsError {

@@ -7,6 +7,7 @@ export default defineConfig({
   optimizeDeps: {
     exclude: [
       "@duckdb/node-api",
+      "memfs",
     ],
   },
   define: {
@@ -15,6 +16,7 @@ export default defineConfig({
       .toString(),
     __CLIENT__: "true",
     __SERVER__: "false",
+    __MEMORY__: `${process.env["MEMORY_FS"] === "1"}`,
   },
   test: {
     include: [
