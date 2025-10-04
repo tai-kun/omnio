@@ -4,6 +4,10 @@
 
 Node.js とブラウザーの両方で動作し、ファイル本体とそのメタデータを一貫した API で扱うことができます。
 
+[![CI](https://github.com/tai-kun/omnio/actions/workflows/ci.yaml/badge.svg)](https://github.com/tai-kun/omnio/actions/workflows/ci.yaml)
+[![npm version](https://img.shields.io/npm/v/omnio)](https://www.npmjs.com/package/omnio)
+[![License: MIT](https://img.shields.io/badge/License-MIT-red.svg)](https://opensource.org/licenses/MIT)
+
 ## ✨ 特徴
 
 - 🧩 **メタデータ中心設計** — ファイルに構造化メタデータと説明文を付与可能  
@@ -92,12 +96,12 @@ const omnio = new Omnio({
 
 ```ts
 import { Omnio } from "omnio";
-import { WasmDb } from "omnio/db/wasm";
+import { NodeDb } from "omnio/db/node";
 import { MemoryFs } from "omnio/fs/memory";
 
 const omnio = new Omnio({
   fs: new MemoryFs(),
-  db: new WasmDb(),
+  db: new NodeDb(),
   bucketName: "test-data",
 });
 ```
