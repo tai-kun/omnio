@@ -65,7 +65,6 @@ jobs:
       - name: "公開"
         run: |
           echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
-          USER=$(npm whoami)
-          echo "✅ NPM token is valid. Logged in as: $USER"
+          npm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
