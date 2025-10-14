@@ -27,3 +27,20 @@ jobs:
 
       - name: "ビルド"
         run: mise run build
+
+  verify-npm-token:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    steps:
+      - name: "チェックアウト"
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4.2.2
+
+      - name: "mise をセットアップ"
+        uses: jdx/mise-action@5ac50f778e26fac95da98d50503682459e86d566  # v3.2.0
+
+      - name: "NPM トークンの検証"
+        run: |
+          echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
