@@ -544,7 +544,7 @@ type ObjectMetadataInTrash = {
   /**
    * `recordType` が更新された時刻 (ミリ秒) です。
    */
-  recordTimestamp: v.InferOutput<typeof schemas.Checksum>;
+  recordTimestamp: v.InferOutput<typeof schemas.Timestamp>;
 
   /**
    * オブジェクト形式です。
@@ -554,12 +554,12 @@ type ObjectMetadataInTrash = {
   /**
    * オブジェクトが作成された時刻 (ミリ秒) です。
    */
-  createdAt: v.InferOutput<typeof schemas.Checksum>;
+  createdAt: v.InferOutput<typeof schemas.Timestamp>;
 
   /**
    * オブジェクトが最後に更新された時刻 (ミリ秒) です。
    */
-  lastModifiedAt: v.InferOutput<typeof schemas.Checksum>;
+  lastModifiedAt: v.InferOutput<typeof schemas.Timestamp>;
 
   /**
    * オブジェクトのチェックサム (MD5 ハッシュ値) です。
