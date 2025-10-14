@@ -115,7 +115,7 @@ type ObjectFileInput = Readonly<{
   /**
    * 最終更新日 (ミリ秒) です。
    */
-  lastModified: number;
+  lastModified: v.InferOutput<typeof schemas.Timestamp>;
 
   /**
    * オブジェクトに関連付けられたオブジェクトタグです。
@@ -192,7 +192,7 @@ export type ObjectFileJson =
     /**
      * 最終更新日 (ミリ秒) です。
      */
-    lastModified: number;
+    lastModified: v.InferOutput<typeof schemas.Timestamp>;
 
     /**
      * オブジェクトに関連付けられたオブジェクトタグです。
@@ -271,6 +271,11 @@ export default class ObjectFile extends globalThis.File implements
   public override readonly type: v.InferOutput<typeof schemas.MimeType>;
 
   /**
+   * オブジェクトの最終更新日 (ミリ秒) です。
+   */
+  public override readonly lastModified: v.InferOutput<typeof schemas.Timestamp>;
+
+  /**
    * オブジェクトに関連付けられたオブジェクトタグです。
    */
   public objectTags: v.InferOutput<typeof schemas.ObjectTags> | undefined;
@@ -312,6 +317,7 @@ export default class ObjectFile extends globalThis.File implements
     this.checksum = checksum;
     this.size = size;
     this.type = type;
+    this.lastModified = lastModified;
     this.objectTags = objectTags;
     this.description = description;
     this.userMetadata = userMetadata;
