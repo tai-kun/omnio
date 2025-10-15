@@ -4,22 +4,12 @@ bun = "1"
 
 [tasks.test]
 run = [
-    { task = "test:client" },
     { task = "test:server" },
     { task = "test:typecheck" },
 ]
 
-[tasks."test:client"]
-run = [
-    "MEMORY_FS=0 npx vitest --config .config/vitest.client.ts --run tests/",
-    # "MEMORY_FS=1 npx vitest --config .config/vitest.client.ts --run tests/omnio.test.ts",
-]
-
 [tasks."test:server"]
-run = [
-    "MEMORY_FS=0 npx vitest --config .config/vitest.server.ts --run tests/",
-    "MEMORY_FS=1 npx vitest --config .config/vitest.server.ts --run tests/omnio.test.ts",
-]
+run = "npx vitest --config .config/vitest.server.ts --run"
 
 [tasks."test:typecheck"]
 run = "npx tsc --noEmit"

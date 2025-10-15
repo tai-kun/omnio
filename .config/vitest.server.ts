@@ -14,11 +14,10 @@ export default defineConfig({
   },
   test: {
     include: [
-      "**\/*.test.ts?(x)",
+      "tests\/**\/*.test.ts",
     ],
     exclude: [
-      "**\/*.client.test.ts?(x)",
-      ".temp/**",
+      "tests\/**\/*.client.test.ts",
     ],
   },
 });
