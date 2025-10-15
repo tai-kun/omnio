@@ -16,15 +16,13 @@ export default defineConfig({
       .toString(),
     __CLIENT__: "true",
     __SERVER__: "false",
-    __MEMORY__: `${process.env["MEMORY_FS"] === "1"}`,
   },
   test: {
     include: [
-      "**\/*.test.ts?(x)",
+      "tests\/**\/*.test.ts",
     ],
     exclude: [
-      "**\/*.server.test.ts?(x)",
-      ".temp/**",
+      "tests\/**\/*.server.test.ts",
     ],
     browser: {
       provider: "playwright",
