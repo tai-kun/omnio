@@ -1,0 +1,28 @@
+{
+  "extends": [
+    "@tsconfig/node22",
+    "@tsconfig/strictest"
+  ],
+  "include": [
+    "./env.d.ts",
+    "../src/**/*",
+    "../tests/**/*"
+  ],
+  "exclude": [
+    "../src/envs/browser/**/*",
+    "../tests/**/*.client.test.ts"
+  ],
+  "compilerOptions": {
+    "types": [
+      "node"
+    ],
+    "lib": [
+      "ESNext"
+    ],
+    "noEmit": true,
+    "target": "es2020",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "erasableSyntaxOnly": true
+  }
+}

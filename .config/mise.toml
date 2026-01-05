@@ -1,0 +1,48 @@
+[tools]
+node = "22"
+
+[tasks.test]
+run = [
+    { task = "test:server" },
+    { task = "test:client" },
+    { task = "test:typecheck" },
+]
+
+[tasks."test:server"]
+run = [
+    { task = "test:server:memory" },
+    { task = "test:server:local" },
+]
+
+[tasks."test:server:memory"]
+env = { FILE_SYSTEM = "memory" }
+run = "npx vitest --config ./.config/vitest.server.ts"
+
+[tasks."test:server:local"]
+env = { FILE_SYSTEM = "local" }
+run = "npx vitest --config ./.config/vitest.server.ts"
+
+[tasks."test:client"]
+run = [
+    { task = "test:client:memory" },
+    { task = "test:client:opfs" },
+]
+
+[tasks."test:client:memory"]
+env = { FILE_SYSTEM = "memory" }
+run = "npx vitest --config ./.config/vitest.client.ts"
+
+[tasks."test:client:opfs"]
+env = { FILE_SYSTEM = "opfs" }
+run = "npx vitest --config ./.config/vitest.client.ts"
+
+[tasks."test:typecheck"]
+run = "npx tsc --noEmit --project ./.config/tsconfig.test.json"
+
+[tasks.update]
+run = [
+    "npx npm-check-updates --target minor -u --cooldown 3",
+    "npm install",
+    "npx playwright install chromium --with-deps",
+    "npm audit",
+]

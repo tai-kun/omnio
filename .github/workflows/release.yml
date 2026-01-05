@@ -1,0 +1,80 @@
+name: "リリース"
+run-name: "v${{ github.event.inputs.version }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "バージョン（例：1.2.3）"
+        required: true
+
+defaults:
+  run:
+    shell: bash -euo pipefail {0}
+
+jobs:
+  publish:
+    timeout-minutes: 15
+    runs-on: ubuntu-latest
+    permissions:
+        contents: write
+        id-token: write
+    steps:
+      - name: "バージョン解析"
+        uses: tai-kun/gha-semver-parser@v1
+        with:
+          version: ${{ github.event.inputs.version }}
+        id: semver
+
+      - name: "バージョン確認"
+        run: |
+          if npm view "omnio@${{ steps.semver.outputs.version }}" version >/dev/null 2>&1; then
+            echo "Error: そのバージョンはすでに存在しています。" >&2
+            exit 1
+          fi
+
+      - name: "チェックアウト"
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
+
+      - name: "Node.js をセットアップ"
+        uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f  # v6.1.0
+        with:
+          node-version: 24.x
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - name: "npm を最新にする"
+        run: npm install -g npm@latest
+
+      - name: "依存関係をインストール"
+        run: npm ci
+
+      - name: "ビルド"
+        run: npm run build
+
+      - name: "バージョンを更新"
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "github-actions@github.com"
+          npm version '${{ steps.semver.outputs.version }}'
+
+      - name: "タグ打ち"
+        run: |
+          TAG_NAME="v${{ steps.semver.outputs.version }}"
+          echo "タグを作成：$TAG_NAME"
+          git tag -f "$TAG_NAME"
+          git push origin -f "$TAG_NAME"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: "公開"
+        run: npm publish
+
+      - name: "npm ログをアップロード"
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f  # v6.0.0
+        with:
+          name: npm-logs-publish
+          path: /home/runner/.npm/_logs/*.log
+          if-no-files-found: ignore
+          retention-days: 7

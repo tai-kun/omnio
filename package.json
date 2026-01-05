@@ -1,0 +1,64 @@
+{
+  "name": "omnio",
+  "version": "0.0.0",
+  "description": "",
+  "sideEffects": false,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./browser": {
+      "types": "./dist/envs/browser/browser.d.ts",
+      "default": "./dist/envs/browser/browser.js"
+    },
+    "./node": {
+      "types": "./dist/envs/node/node.d.ts",
+      "default": "./dist/envs/node/node.js"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "package.json",
+    "LICENSE"
+  ],
+  "homepage": "https://github.com/tai-kun/omnio",
+  "repository": {
+    "url": "https://github.com/tai-kun/omnio"
+  },
+  "dependencies": {
+    "@duckdb/duckdb-wasm": "^1.32.0",
+    "@duckdb/node-api": "^1.4.3-r.2",
+    "@tai-kun/is-promise-like": "^0.0.4",
+    "asyncmux": "^0.0.2",
+    "filename-reserved-regex": "^4.0.0",
+    "hash-wasm": "^4.12.0",
+    "i18n-error-base": "^0.0.2",
+    "mime": "^4.1.0",
+    "sql-template-tag": "^5.2.1",
+    "try-capture-stack-trace": "^0.0.2",
+    "type-name": "^2.0.2",
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@tsconfig/node22": "^22.0.5",
+    "@tsconfig/strictest": "^2.0.8",
+    "@types/filename-reserved-regex": "^3.0.0",
+    "@types/node": "^22.19.3",
+    "@types/type-name": "^1.0.32",
+    "@vitest/browser": "^4.0.16",
+    "@vitest/browser-playwright": "^4.0.16",
+    "dprint": "^0.51.1",
+    "npm-check-updates": "^19.2.0",
+    "playwright": "^1.57.0",
+    "typescript": "^5.9.3",
+    "valibot": "^1.2.0",
+    "superjson": "^2.2.6",
+    "vitest": "^4.0.16"
+  },
+  "scripts": {
+    "build": "tsc --project ./.config/tsconfig.build.json"
+  }
+}
