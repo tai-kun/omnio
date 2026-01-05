@@ -10,6 +10,15 @@ jobs:
   test:
     timeout-minutes: 15
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        task:
+          - server:memory
+          - server:local
+          - client:memory
+          - client:opfs
+          - typecheck
     steps:
       - name: "チェックアウト"
         uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8  # v6.0.1
@@ -23,7 +32,7 @@ jobs:
           npx playwright install chromium --with-deps
 
       - name: "テスト"
-        run: mise run test
+        run: mise run test:${{ matrix.task }}
 
       - name: "ビルド"
         run: npm run build
